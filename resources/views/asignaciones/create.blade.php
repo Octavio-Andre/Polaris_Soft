@@ -58,7 +58,8 @@
     <section class="card" aria-label="Formulario de asignación">
         <div id="asignacion-aviso" class="aviso" role="status" aria-live="polite"></div>
 
-        <form id="asignacion-form" method="post" novalidate>
+        <form id="asignacion-form" method="post" novalidate
+              data-api-url="{{ url('/api') }}" data-estudiante-id="{{ $estudiante->id_estudiante }}">
             @csrf
             <div class="field">
                 <label for="materia">Materia</label>
@@ -92,19 +93,7 @@
     </section>
 </main>
 
-<script>
-    window.asignacionFuente = (function (catalogo) {
-        const filtrar = (lista, campo, id) => lista.filter(item => String(item[campo]) === String(id));
-        return {
-            materias: async () => catalogo.materias,
-            grupos: async (materiaId) => filtrar(catalogo.grupos, 'materia_id', materiaId),
-            docentes: async (grupoId) => filtrar(catalogo.docentes, 'grupo_id', grupoId),
-            guardar: async () => {
-                throw new Error('El guardado estará disponible al integrar la API de asignación.');
-            },
-        };
-    })(@json($catalogo));
-</script>
+<script src="{{ asset('js/asignacion-api.js') }}"></script>
 <script src="{{ asset('js/asignacion.js') }}"></script>
 </body>
 </html>
