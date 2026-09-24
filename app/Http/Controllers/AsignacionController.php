@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Asignacion;
 use App\Models\Estudiante;
-use App\Models\Grupo;
-use App\Models\Materia;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -13,40 +11,11 @@ class AsignacionController extends Controller
 {
     public function create(Estudiante $estudiante): View
     {
-        $materias = Materia::orderBy('nombre')->get();
-        $grupos = Grupo::with(['materia', 'docente'])->orderBy('nombre')->get();
         $asignaciones = Asignacion::with(['materia', 'grupo', 'docente'])
             ->where('estudiante_id', $estudiante->getKey())
             ->get();
 
-        $catalogo = [
-            'materias' => $materias->map(function (Materia $materia) {
-                return [
-                    'id' => $materia->id,
-                    'nombre' => $materia->nombre,
-                ];
-            })->values(),
-            'grupos' => $grupos->map(function (Grupo $grupo) {
-                return [
-                    'id' => $grupo->id,
-                    'materia_id' => $grupo->materia_id,
-                    'nombre' => $grupo->nombre,
-                ];
-            })->values(),
-            'docentes' => $grupos->filter(function (Grupo $grupo) {
-                return $grupo->docente_id !== null;
-            })->map(function (Grupo $grupo) {
-                return [
-                    'id' => $grupo->docente_id,
-                    'grupo_id' => $grupo->id,
-                    'nombre' => $grupo->docente ? $grupo->docente->nombre_completo : null,
-                ];
-            })->filter(function (array $docente) {
-                return $docente['nombre'] !== null;
-            })->values(),
-        ];
-
-        return view('asignaciones.create', compact('estudiante', 'catalogo', 'asignaciones'));
+        return view('asignaciones.create', compact('estudiante', 'asignaciones'));
     }
 
     public function store(Request $request, Estudiante $estudiante)

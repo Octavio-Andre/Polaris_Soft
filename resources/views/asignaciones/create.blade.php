@@ -32,7 +32,8 @@
 
         <div id="asignacion-aviso" class="aviso" role="status" aria-live="polite"></div>
 
-        <form id="asignacion-form" method="post" action="{{ route('asignaciones.store', $estudiante) }}" novalidate>
+        <form id="asignacion-form" method="post" action="{{ route('asignaciones.store', $estudiante) }}" novalidate
+              data-api-url="{{ url('/api') }}" data-estudiante-id="{{ $estudiante->getKey() }}">
             @csrf
             <div class="asignacion-campos">
                 <div class="field">
@@ -104,15 +105,6 @@
 @endsection
 
 @push('scripts')
-<script>
-    window.asignacionFuente = (function (catalogo) {
-        const filtrar = (lista, campo, id) => lista.filter(item => String(item[campo]) === String(id));
-        return {
-            materias: async () => catalogo.materias,
-            grupos: async (materiaId) => filtrar(catalogo.grupos, 'materia_id', materiaId),
-            docentes: async (grupoId) => filtrar(catalogo.docentes, 'grupo_id', grupoId),
-        };
-    })(@json($catalogo));
-</script>
+<script src="{{ asset('js/asignacion-api.js') }}"></script>
 <script src="{{ asset('js/asignacion.js') }}"></script>
 @endpush
