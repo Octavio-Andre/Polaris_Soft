@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Asignacion extends Model
 {
+    protected $table = 'asignaciones';
+
     protected $fillable = ['estudiante_id', 'materia_id', 'grupo_id', 'docente_id'];
 
     public function estudiante()
@@ -29,3 +31,4 @@ class Asignacion extends Model
         return $this->belongsTo(Docente::class);
     }
 }
+       
