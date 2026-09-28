@@ -1,3 +1,36 @@
+# Polaris Soft · SCIEM (Sistema de Control de Exámenes Masivos)
+
+Laravel 10 + Blade. Interfaz basada en el diseño Figma **POLARIS-SCIEM** (login, dashboard admin, estudiantes, exámenes y usuarios).
+
+## Puesta en marcha
+
+```bash
+composer install
+cp .env.example .env          # ajusta DB_DATABASE / DB_USERNAME / DB_PASSWORD (por defecto: polaris / root)
+php artisan key:generate
+php artisan migrate:fresh --seed
+php artisan serve             # http://127.0.0.1:8000
+```
+
+No hace falta `npm`: los estilos están en `public/css/sciem.css` y el JS de los modales en `public/js/sciem.js`.
+
+Usuarios de prueba (contraseña `password123`):
+
+| Rol | Correo |
+|---|---|
+| Administrador | carlos.choque@sciem.edu |
+| Docente | maria.ramos@sciem.edu |
+| Personal de control | jorge.torrez@sciem.edu |
+| Docente (inactivo, no puede ingresar) | andrea.paredes@sciem.edu |
+
+## Estructura de la interfaz
+
+- `resources/views/layouts/app.blade.php`: sidebar + topbar (el menú depende del rol).
+- `auth/login`, `admin/dashboard`, `estudiantes/index`, `examenes/index`, `usuarios/index`: cada pantalla del Figma (los modales de "Registrar…" están dentro de cada vista).
+- Rutas en `routes/web.php`; módulos de gestión protegidos con `role:administrador`.
+
+---
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

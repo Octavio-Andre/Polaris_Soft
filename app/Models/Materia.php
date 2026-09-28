@@ -12,4 +12,14 @@ class Materia extends Model
     {
         return $this->hasMany(Grupo::class);
     }
+
+    public function asignaciones()
+    {
+        return $this->hasMany(Asignacion::class);
+    }
+
+    public function examenes()
+    {
+        return $this->hasMany(Examen::class);
+    }
 }

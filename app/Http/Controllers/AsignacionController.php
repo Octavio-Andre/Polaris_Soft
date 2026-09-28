@@ -22,7 +22,7 @@ class AsignacionController extends Controller
         $grupos = Grupo::with('materia')->orderBy('nombre')->get();
         $docentes = Docente::orderBy('nombre')->get();
         $asignaciones = Asignacion::with(['materia', 'grupo', 'docente'])
-            ->where('estudiante_id', $estudiante->id)
+            ->where('estudiante_id', $estudiante->getKey())
             ->get();
 
         return view('asignaciones.create', compact('estudiante', 'materias', 'grupos', 'docentes', 'asignaciones'));
@@ -43,10 +43,10 @@ class AsignacionController extends Controller
             'grupo_id.required' => 'Selecciona un grupo.',
         ]);
 
-        $data['estudiante_id'] = $estudiante->id;
+        $data['estudiante_id'] = $estudiante->getKey();
 
         // Evita duplicar la misma materia para el mismo estudiante
-        $yaExiste = Asignacion::where('estudiante_id', $estudiante->id)
+        $yaExiste = Asignacion::where('estudiante_id', $estudiante->getKey())
             ->where('materia_id', $data['materia_id'])
             ->exists();
 
