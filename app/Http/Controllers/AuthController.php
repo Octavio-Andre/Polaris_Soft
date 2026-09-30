@@ -27,7 +27,8 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        // Solo pueden ingresar cuentas activas
+        if (Auth::attempt($credentials + ['estado' => 'activo'], $request->boolean('remember'))) {
             $request->session()->regenerate();
 
             return match (Auth::user()->rol) {
@@ -38,7 +39,7 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'Las credenciales no coinciden con nuestros registros.',
+            'email' => 'Usuario o contraseña incorrectos, o la cuenta está inactiva.',
         ])->onlyInput('email');
     }
 

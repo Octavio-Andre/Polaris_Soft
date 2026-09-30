@@ -9,7 +9,7 @@ class DocenteController extends Controller
 {
     public function index()
     {
-        $docentes = Docente::orderBy('nombre')->get();
+        $docentes = Docente::withCount('grupos')->orderBy('nombre')->get();
         return view('docentes.index', compact('docentes'));
     }
 
