@@ -31,4 +31,3 @@ class Asignacion extends Model
         return $this->belongsTo(Docente::class);
     }
 }
-       

@@ -58,12 +58,6 @@
             <svg class="i sm"><use href="#i-logout"/></svg> Iniciar sesión
         </button>
 
-        @if ($errors->any())
-            <div class="alert" role="alert">
-                <svg class="i"><use href="#i-alert"/></svg>
-                <span>{{ $errors->first() }}</span>
-            </div>
-        @endif
     </form>
 
     <p class="login-foot">
@@ -71,5 +65,26 @@
         SCIEM — Sistema de Control de Exámenes Masivos
     </p>
 </div>
+
+{{-- ================= MODAL: error de acceso ================= --}}
+<dialog id="modal-login-error">
+    <div class="m-head">
+        <span class="ic" style="background:var(--danger-bg);color:var(--danger)"><svg class="i"><use href="#i-alert"/></svg></span>
+        <div><b>No se pudo iniciar sesión</b><small>Verifique los datos e intente de nuevo</small></div>
+        <button type="button" class="icon-btn x" aria-label="Cerrar" onclick="this.closest('dialog').close()"><svg class="i"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="m-body">
+        <p style="color:var(--text)">{{ $errors->first() }}</p>
+    </div>
+    <div class="m-foot">
+        <button type="button" class="btn" onclick="this.closest('dialog').close()">Entendido</button>
+    </div>
+</dialog>
+
+@if ($errors->any())
+    <script>
+        document.getElementById('modal-login-error').showModal();
+    </script>
+@endif
 </body>
 </html>

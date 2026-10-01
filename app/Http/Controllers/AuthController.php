@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /** Máximo de intentos fallidos antes de bloquear temporalmente el acceso. */
+    private const MAX_INTENTOS = 3;
+
+    /** Minutos que dura el bloqueo tras agotar los intentos. */
+    private const MINUTOS_BLOQUEO = 1;
+
     /**
      * Muestra el formulario de login.
-     * La vista (resources/views/auth/login.blade.php) la crea Carlos.
      */
     public function showLoginForm()
     {
@@ -27,20 +35,59 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        // Solo pueden ingresar cuentas activas
-        if (Auth::attempt($credentials + ['estado' => 'activo'], $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        $key = $this->claveIntentos($request);
 
-            return match (Auth::user()->rol) {
-                'administrador' => redirect()->intended('/admin/dashboard'),
-                'docente' => redirect()->intended('/docente/dashboard'),
-                default => redirect()->intended('/control/dashboard'),
-            };
+        // --- Límite de intentos fallidos ---
+        if (RateLimiter::tooManyAttempts($key, self::MAX_INTENTOS)) {
+            $segundos = RateLimiter::availableIn($key);
+            $minutos = (int) ceil($segundos / 60);
+
+            return back()->withErrors([
+                'email' => "Demasiados intentos fallidos. Intente nuevamente en {$minutos} minuto(s).",
+            ])->onlyInput('email');
         }
 
-        return back()->withErrors([
-            'email' => 'Usuario o contraseña incorrectos, o la cuenta está inactiva.',
-        ])->onlyInput('email');
+        $usuario = User::where('email', $credentials['email'])->first();
+
+        // --- Mensaje específico: usuario no existe ---
+        if (! $usuario) {
+            RateLimiter::hit($key, self::MINUTOS_BLOQUEO * 60);
+
+            return back()->withErrors([
+                'email' => 'No existe ninguna cuenta registrada con ese usuario.',
+            ])->onlyInput('email');
+        }
+
+        // --- Mensaje específico: cuenta inactiva ---
+        if ($usuario->estado !== 'activo') {
+            RateLimiter::hit($key, self::MINUTOS_BLOQUEO * 60);
+
+            return back()->withErrors([
+                'email' => 'Esta cuenta está inactiva. Contacte a un administrador.',
+            ])->onlyInput('email');
+        }
+
+        // --- Mensaje específico: contraseña incorrecta ---
+        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            RateLimiter::hit($key, self::MINUTOS_BLOQUEO * 60);
+
+            $restantes = self::MAX_INTENTOS - RateLimiter::attempts($key);
+            $aviso = $restantes > 0
+                ? "Contraseña incorrecta. Le queda(n) {$restantes} intento(s)."
+                : 'Contraseña incorrecta.';
+
+            return back()->withErrors(['password' => $aviso])->onlyInput('email');
+        }
+
+        // --- Login correcto ---
+        RateLimiter::clear($key);
+        $request->session()->regenerate();
+
+        return match (Auth::user()->rol) {
+            'administrador' => redirect()->intended('/admin/dashboard'),
+            'docente' => redirect()->intended('/docente/dashboard'),
+            default => redirect()->intended('/control/dashboard'),
+        };
     }
 
     /**
@@ -53,5 +100,11 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/login');
+    }
+
+    /** Clave única de bloqueo: por correo + IP, para no afectar a otros usuarios desde otra red. */
+    private function claveIntentos(Request $request): string
+    {
+        return Str::lower($request->input('email')).'|'.$request->ip();
     }
 }
