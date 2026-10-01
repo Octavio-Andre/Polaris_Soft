@@ -55,8 +55,8 @@
                         <td><span class="badge {{ $activo ? 'activo' : 'inactivo' }}">{{ $activo ? 'Activo' : 'Inactivo' }}</span></td>
                         <td>
                             <div class="actions">
-                                <button type="button" class="link-btn" data-edit='@json($payload)' data-url="{{ $url }}" data-id="{{ $u->id }}">Editar</button>
-                                <button type="button" class="link-btn muted" data-edit='@json($payload)' data-url="{{ $url }}" data-id="{{ $u->id }}" data-pass="1">Contraseña</button>
+                                <button type="button" class="link-btn" data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $u->id }}">Editar</button>
+                                <button type="button" class="link-btn muted" data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $u->id }}" data-pass="1">Contraseña</button>
                                 @if (! $u->is(auth()->user()))
                                     <form method="POST" action="{{ route('usuarios.estado', $u) }}">
                                         @csrf @method('PATCH')

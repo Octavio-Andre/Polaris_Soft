@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\AsignacionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocenteController;
 use App\Http\Controllers\EstudianteController;
 use App\Http\Controllers\ExamenController;
+use App\Http\Controllers\GrupoController;
+use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +25,16 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
 
     Route::resource('estudiantes', EstudianteController::class)->except(['create', 'show', 'edit']);
+
+    // Materias, docentes y grupos (RQ27)
+    Route::resource('materias', MateriaController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('docentes', DocenteController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('grupos', GrupoController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Asignar materia + grupo + docente a un estudiante (RQ27)
+    Route::get('/estudiantes/{estudiante}/asignaciones', [AsignacionController::class, 'create'])->name('asignaciones.create');
+    Route::post('/estudiantes/{estudiante}/asignaciones', [AsignacionController::class, 'store'])->name('asignaciones.store');
+    Route::delete('/asignaciones/{asignacion}', [AsignacionController::class, 'destroy'])->name('asignaciones.destroy');
 
     Route::resource('examenes', ExamenController::class)
         ->parameters(['examenes' => 'examen'])

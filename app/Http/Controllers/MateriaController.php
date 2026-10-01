@@ -9,7 +9,7 @@ class MateriaController extends Controller
 {
     public function index()
     {
-        $materias = Materia::orderBy('nombre')->get();
+        $materias = Materia::withCount('grupos')->orderBy('nombre')->get();
         return view('materias.index', compact('materias'));
     }
 

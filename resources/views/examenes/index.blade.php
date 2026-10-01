@@ -82,10 +82,10 @@
                         <td>
                             <div class="actions">
                                 <button type="button" class="icon-btn" title="Ver" aria-label="Ver"
-                                        data-edit='@json($payload)' data-url="{{ $url }}" data-id="{{ $e->id }}" data-mode="ver">
+                                        data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $e->id }}" data-mode="ver">
                                     <svg class="i"><use href="#i-eye"/></svg></button>
                                 <button type="button" class="icon-btn" title="Editar" aria-label="Editar"
-                                        data-edit='@json($payload)' data-url="{{ $url }}" data-id="{{ $e->id }}" @disabled($e->estado === 'finalizado')>
+                                        data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $e->id }}" @disabled($e->estado === 'finalizado')>
                                     <svg class="i"><use href="#i-edit"/></svg></button>
                                 <form method="POST" action="{{ $url }}" onsubmit="return confirm('¿Eliminar este examen? Esta acción no se puede deshacer.')">
                                     @csrf @method('DELETE')
