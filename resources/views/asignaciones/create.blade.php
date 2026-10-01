@@ -19,6 +19,8 @@
         </div>
     </div>
 
+    @include('partials.flash')
+
     <section class="card asignacion-card" aria-label="Formulario de asignación">
         <div class="m-head">
             <span class="ic"><svg class="i" aria-hidden="true"><use href="#i-students"/></svg></span>
@@ -30,7 +32,7 @@
 
         <div id="asignacion-aviso" class="aviso" role="status" aria-live="polite"></div>
 
-        <form id="asignacion-form" method="post" novalidate>
+        <form id="asignacion-form" method="post" action="{{ route('asignaciones.store', $estudiante) }}" novalidate>
             @csrf
             <div class="asignacion-campos">
                 <div class="field">
@@ -66,6 +68,38 @@
             </div>
         </form>
     </section>
+
+    <section class="card asignacion-lista" aria-label="Asignaciones actuales">
+        <div class="m-head"><b>Asignaciones actuales</b></div>
+        <div class="scroll">
+            <table id="asignaciones-tabla">
+                <thead><tr><th>Materia</th><th>Grupo</th><th>Docente</th><th style="text-align:right">Acción</th></tr></thead>
+                <tbody id="asignaciones-filas">
+                @forelse ($asignaciones as $asignacion)
+                    <tr data-asignacion-id="{{ $asignacion->id }}">
+                        <td class="strong">{{ $asignacion->materia->nombre ?? '—' }}</td>
+                        <td>{{ $asignacion->grupo->nombre ?? '—' }}</td>
+                        <td>{{ $asignacion->docente->nombre ?? 'Sin docente' }}</td>
+                        <td>
+                            <div class="actions">
+                                <form method="POST" action="{{ route('asignaciones.destroy', $asignacion) }}"
+                                      onsubmit="return confirm('¿Quitar esta asignación?')">
+                                    @csrf @method('DELETE')
+                                    <button class="icon-btn danger" type="submit" title="Quitar" aria-label="Quitar {{ $asignacion->materia->nombre ?? 'asignación' }}">
+                                        <svg class="i"><use href="#i-trash"/></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr id="asignaciones-vacio"><td colspan="4" class="empty">Este estudiante aún no tiene materias asignadas.</td></tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="foot"><span id="asignaciones-total">{{ $asignaciones->count() }} materias asignadas</span></div>
+    </section>
 </div>
 @endsection
 
@@ -77,9 +111,6 @@
             materias: async () => catalogo.materias,
             grupos: async (materiaId) => filtrar(catalogo.grupos, 'materia_id', materiaId),
             docentes: async (grupoId) => filtrar(catalogo.docentes, 'grupo_id', grupoId),
-            guardar: async () => {
-                throw new Error('El guardado estará disponible al integrar la API de asignación.');
-            },
         };
     })(@json($catalogo));
 </script>

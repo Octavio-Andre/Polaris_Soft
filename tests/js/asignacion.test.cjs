@@ -135,3 +135,14 @@ test('tras un fallo al guardar se conservan las selecciones y se permite reinten
     assert.equal(ui.boton.disabled, false);
     assert.equal(ui['asignacion-aviso'].textContent, 'No se pudo conectar');
 });
+
+test('sin API se conserva el envío normal del formulario y sus campos habilitados', async () => {
+    const ui = await formulario({ guardar: undefined });
+    await completar(ui);
+    let cancelado = false;
+    await ui['asignacion-form'].eventos.submit({ preventDefault() { cancelado = true; } });
+    assert.equal(cancelado, false);
+    assert.equal(ui.materia.disabled, false);
+    assert.equal(ui.grupo.disabled, false);
+    assert.equal(ui.docente.disabled, false);
+});

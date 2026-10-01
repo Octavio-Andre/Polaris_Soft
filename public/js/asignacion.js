@@ -1,6 +1,7 @@
 // Selectores en cascada del formulario de asignación: materia → grupo → docente.
 // Los datos llegan desde window.asignacionFuente, que expone materias(), grupos(materiaId),
-// docentes(grupoId) y guardar(datos), todos asíncronos.
+// docentes(grupoId), todos asíncronos. guardar(datos) es opcional;
+// si falta, el formulario se envía a su action mediante el flujo web.
 (function () {
     const fuente = window.asignacionFuente;
     const form = document.getElementById('asignacion-form');
@@ -83,6 +84,7 @@
     campos.docente.select.addEventListener('change', actualizarBoton);
 
     form.addEventListener('submit', async (event) => {
+        if (typeof fuente.guardar !== 'function') return;
         event.preventDefault();
         if (boton.disabled) return;
 
