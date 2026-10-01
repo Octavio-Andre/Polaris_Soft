@@ -33,7 +33,8 @@
         <div id="asignacion-aviso" class="aviso" role="status" aria-live="polite"></div>
 
         <form id="asignacion-form" method="post" action="{{ route('asignaciones.store', $estudiante) }}" novalidate
-              data-api-url="{{ url('/api') }}" data-estudiante-id="{{ $estudiante->getKey() }}">
+              data-api-url="{{ url('/api') }}" data-estudiante-id="{{ $estudiante->getKey() }}"
+              data-delete-url-template="{{ route('asignaciones.destroy', '__ASIGNACION__') }}">
             @csrf
             <div class="asignacion-campos">
                 <div class="field">

@@ -88,6 +88,49 @@ class AsignacionApiTest extends TestCase
         $this->assertDatabaseHas('asignaciones', ['estudiante_id' => 42] + $this->datos());
     }
 
+    public function test_la_ruta_actual_muestra_la_asignacion_guardada_y_su_accion_quitar(): void
+    {
+        $asignacionId = $this->actingAs($this->admin)
+            ->postJson('/api/estudiantes/42/asignaciones', $this->datos())
+            ->assertCreated()->json('data.id');
+
+        $this->get('/estudiantes/42/asignaciones')->assertOk()
+            ->assertSee('Materia A')->assertSee('Grupo A')->assertSee('Docente A')
+            ->assertSee('data-asignacion-id="'.$asignacionId.'"', false)
+            ->assertSee('Quitar Materia A')->assertSee('1 materias asignadas');
+    }
+
+    public function test_conserva_el_guardado_web_de_main(): void
+    {
+        $this->actingAs($this->admin)->from('/estudiantes/42/asignaciones')
+            ->post('/estudiantes/42/asignaciones', $this->datos())
+            ->assertRedirect('/estudiantes/42/asignaciones')
+            ->assertSessionHas('success', 'Asignación registrada correctamente.');
+
+        $this->assertDatabaseHas('asignaciones', ['estudiante_id' => 42] + $this->datos());
+    }
+
+    public function test_quitar_elimina_solo_la_asignacion_elegida_y_regresa_a_la_ruta_actual(): void
+    {
+        $asignacionId = $this->actingAs($this->admin)
+            ->postJson('/api/estudiantes/42/asignaciones', $this->datos())
+            ->assertCreated()->json('data.id');
+        $otraMateria = Materia::create(['nombre' => 'Materia B']);
+        $otroGrupo = Grupo::create([
+            'nombre' => 'Grupo B', 'materia_id' => $otraMateria->id, 'docente_id' => $this->docente->id,
+        ]);
+        $otraAsignacionId = $this->postJson('/api/estudiantes/42/asignaciones',
+            array_replace($this->datos(), ['materia_id' => $otraMateria->id, 'grupo_id' => $otroGrupo->id]))
+            ->assertCreated()->json('data.id');
+
+        $this->delete('/asignaciones/'.$asignacionId)
+            ->assertRedirect('/estudiantes/42/asignaciones')
+            ->assertSessionHas('success', 'Asignación eliminada.');
+        $this->assertDatabaseMissing('asignaciones', ['id' => $asignacionId]);
+        $this->assertDatabaseHas('asignaciones', ['id' => $otraAsignacionId, 'estudiante_id' => 42]);
+        $this->assertDatabaseCount('asignaciones', 1);
+    }
+
     public function test_rechaza_un_grupo_de_otra_materia(): void
     {
         $otraMateria = Materia::create(['nombre' => 'Materia B']);
