@@ -46,13 +46,69 @@
         return 'Ocurrió un error inesperado (' + estado + ').';
     }
 
+    function agregarAsignacion(asignacion, nombres) {
+        const filas = document.getElementById('asignaciones-filas');
+        const fila = document.createElement('tr');
+        fila.dataset.asignacionId = asignacion.id;
+        nombres.forEach((nombre, indice) => {
+            const celda = document.createElement('td');
+            celda.textContent = nombre;
+            if (indice === 0) celda.className = 'strong';
+            fila.append(celda);
+        });
+
+        const accion = document.createElement('td');
+        const acciones = document.createElement('div');
+        acciones.className = 'actions';
+        const quitar = document.createElement('form');
+        quitar.method = 'POST';
+        quitar.action = form.dataset.deleteUrlTemplate.replace('__ASIGNACION__', encodeURIComponent(asignacion.id));
+        quitar.addEventListener('submit', (event) => {
+            if (!window.confirm('¿Quitar esta asignación?')) event.preventDefault();
+        });
+        [['_token', csrf], ['_method', 'DELETE']].forEach(([nombre, valor]) => {
+            const campo = document.createElement('input');
+            campo.type = 'hidden';
+            campo.name = nombre;
+            campo.value = valor;
+            quitar.append(campo);
+        });
+        const boton = document.createElement('button');
+        boton.type = 'submit';
+        boton.className = 'icon-btn danger';
+        boton.title = 'Quitar';
+        boton.setAttribute('aria-label', 'Quitar ' + nombres[0]);
+        const icono = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icono.setAttribute('class', 'i');
+        icono.setAttribute('aria-hidden', 'true');
+        const uso = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        uso.setAttribute('href', '#i-trash');
+        icono.append(uso);
+        boton.append(icono);
+        quitar.append(boton);
+        acciones.append(quitar);
+        accion.append(acciones);
+        fila.append(accion);
+
+        document.getElementById('asignaciones-vacio')?.remove();
+        filas.append(fila);
+        document.getElementById('asignaciones-total').textContent =
+            filas.querySelectorAll('tr[data-asignacion-id]').length + ' materias asignadas';
+    }
+
     window.asignacionFuente = {
         materias: () => pedir('/materias'),
         grupos: (materiaId) => pedir('/materias/' + encodeURIComponent(materiaId) + '/grupos'),
         docentes: (grupoId) => pedir('/grupos/' + encodeURIComponent(grupoId) + '/docentes'),
-        guardar: (datos) => pedir('/estudiantes/' + encodeURIComponent(estudianteId) + '/asignaciones', {
-            method: 'POST',
-            body: JSON.stringify(datos),
-        }),
+        guardar: async (datos) => {
+            const nombres = ['materia', 'grupo', 'docente'].map(id =>
+                document.getElementById(id).selectedOptions[0].textContent);
+            const asignacion = await pedir('/estudiantes/' + encodeURIComponent(estudianteId) + '/asignaciones', {
+                method: 'POST',
+                body: JSON.stringify(datos),
+            });
+            agregarAsignacion(asignacion, nombres);
+            return asignacion;
+        },
     };
 })();
