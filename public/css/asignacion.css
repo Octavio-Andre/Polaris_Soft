@@ -1,5 +1,7 @@
 .asignacion-page { max-width: 900px; }
 .asignacion-card { margin-top: 24px; }
+.asignacion-lista { margin-top: 24px; }
+.asignacion-lista table { min-width: 520px; }
 .asignacion-campos { display: grid; gap: 20px; padding: 24px 22px; }
 .asignacion-page .help { min-height: 18px; margin-top: 6px; color: var(--muted); font-size: 12px; }
 .asignacion-page .aviso { display: none; margin: 18px 22px 0; padding: 10px 12px; border-radius: 9px; }
