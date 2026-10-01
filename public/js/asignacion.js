@@ -6,6 +6,7 @@
     const form = document.getElementById('asignacion-form');
     const aviso = document.getElementById('asignacion-aviso');
     const boton = form.querySelector('button[type="submit"]');
+    let guardando = false;
 
     const campos = {
         materia: { select: document.getElementById('materia'), help: document.getElementById('materia-help'),
@@ -27,6 +28,7 @@
     }
 
     function reiniciar(campo, mensaje) {
+        campo.version = (campo.version || 0) + 1;
         campo.select.replaceChildren(new Option(campo.placeholder, ''));
         campo.select.disabled = true;
         campo.help.textContent = mensaje;
@@ -34,24 +36,30 @@
 
     async function cargar(campo, obtener, vacio) {
         reiniciar(campo, 'Cargando…');
+        actualizarBoton();
+        const version = campo.version;
         try {
             const items = await obtener();
+            if (campo.version !== version) return;
             items.forEach(item => campo.select.add(new Option(item.nombre, item.id)));
             campo.select.disabled = items.length === 0;
             campo.help.textContent = items.length === 0 ? vacio : '';
         } catch (error) {
+            if (campo.version !== version) return;
             campo.help.textContent = 'No se pudo cargar la lista.';
             mostrarAviso('error', error.message);
         }
     }
 
     function actualizarBoton() {
-        boton.disabled = !Object.values(campos).every(campo => campo.select.value !== '');
+        boton.disabled = guardando || !Object.values(campos).every(campo =>
+            !campo.select.disabled && campo.select.value !== '');
     }
 
     campos.materia.select.addEventListener('change', async () => {
         ocultarAviso();
         reiniciar(campos.docente, campos.docente.pendiente);
+        actualizarBoton();
         const materiaId = campos.materia.select.value;
         if (materiaId === '') {
             reiniciar(campos.grupo, campos.grupo.pendiente);
@@ -78,18 +86,23 @@
         event.preventDefault();
         if (boton.disabled) return;
 
-        boton.disabled = true;
+        const datos = {
+            materia_id: campos.materia.select.value,
+            grupo_id: campos.grupo.select.value,
+            docente_id: campos.docente.select.value,
+        };
+        guardando = true;
+        Object.values(campos).forEach(campo => { campo.select.disabled = true; });
+        actualizarBoton();
         mostrarAviso('info', 'Guardando asignación…');
         try {
-            await fuente.guardar({
-                materia_id: campos.materia.select.value,
-                grupo_id: campos.grupo.select.value,
-                docente_id: campos.docente.select.value,
-            });
+            await fuente.guardar(datos);
             mostrarAviso('ok', 'Asignación registrada correctamente.');
         } catch (error) {
             mostrarAviso('error', error.message);
         } finally {
+            guardando = false;
+            Object.values(campos).forEach(campo => { campo.select.disabled = false; });
             actualizarBoton();
         }
     });
