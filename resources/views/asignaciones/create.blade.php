@@ -60,7 +60,7 @@
                 <select id="a-docente" name="docente_id">
                     <option value="">Sin docente</option>
                     @foreach ($docentes as $d)
-                        <option value="{{ $d->id }}" @selected((string) old('docente_id') === (string) $d->id)>{{ $d->nombre }}</option>
+                        <option value="{{ $d->id }}" @selected((string) old('docente_id') === (string) $d->id)>{{ $d->nombre_completo }}</option>
                     @endforeach
                 </select>
                 <p class="muted" style="font-size:12px;margin-top:4px">Se completa solo con el docente del grupo; puedes cambiarlo.</p>
@@ -80,7 +80,7 @@
                         <tr>
                             <td class="strong">{{ $a->materia->nombre ?? '—' }}<span class="sub">{{ $a->materia?->sigla }}</span></td>
                             <td>{{ $a->grupo->nombre ?? '—' }}</td>
-                            <td>{{ $a->docente->nombre ?? 'Sin docente' }}</td>
+                            <td>{{ $a->docente->nombre_completo ?? 'Sin docente' }}</td>
                             <td>
                                 <div class="actions">
                                     <form method="POST" action="{{ route('asignaciones.destroy', $a) }}" onsubmit="return confirm('¿Quitar esta asignación?')">

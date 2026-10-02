@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Materia;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class MateriaController extends Controller
 {
+    /** Letras, espacios, acentos y ñ (sin números ni símbolos). */
+    private const REGEX_ALFABETICO = '/^[\pL\s]+$/u';
+
     public function index()
     {
         $materias = Materia::withCount('grupos')->orderBy('nombre')->get();
@@ -15,24 +19,14 @@ class MateriaController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:150'],
-            'sigla' => ['nullable', 'string', 'max:20'],
-        ]);
-
-        Materia::create($data);
+        Materia::create($this->validar($request));
 
         return back()->with('success', 'Materia registrada correctamente.');
     }
 
     public function update(Request $request, Materia $materia)
     {
-        $data = $request->validate([
-            'nombre' => ['required', 'string', 'max:150'],
-            'sigla' => ['nullable', 'string', 'max:20'],
-        ]);
-
-        $materia->update($data);
+        $materia->update($this->validar($request, $materia));
 
         return back()->with('success', 'Materia actualizada correctamente.');
     }
@@ -41,5 +35,16 @@ class MateriaController extends Controller
     {
         $materia->delete();
         return back()->with('success', 'Materia eliminada.');
+    }
+
+    private function validar(Request $request, ?Materia $actual = null): array
+    {
+        return $request->validate([
+            'nombre' => ['required', 'string', 'max:150', 'regex:'.self::REGEX_ALFABETICO],
+            'sigla' => ['required', 'string', 'max:20', Rule::unique('materias', 'sigla')->ignore($actual?->id)],
+        ], [
+            'nombre.regex' => 'El nombre de la materia solo puede contener letras.',
+            'sigla.required' => 'La sigla es obligatoria.',
+        ]);
     }
 }

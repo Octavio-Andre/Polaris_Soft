@@ -3,11 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Grados;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
 {
+    /** Letras, espacios, acentos y ñ (sin números ni símbolos). */
+    private const REGEX_ALFABETICO = '/^[\pL\s]+$/u';
+
+    /**
+     * Dominios de correo personales/gratuitos no permitidos: el correo debe ser institucional.
+     * Ajusta esta lista o cámbiala por un dominio fijo (p. ej. terminar en "@sciem.edu")
+     * según lo que defina tu universidad.
+     */
+    private const DOMINIOS_NO_INSTITUCIONALES = [
+        'gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com',
+        'live.com', 'icloud.com', 'protonmail.com', 'msn.com',
+    ];
+
     public function index(Request $request)
     {
         $usuarios = User::query()
@@ -18,33 +32,27 @@ class UsuarioController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('usuarios.index', ['usuarios' => $usuarios, 'roles' => User::ROLES]);
+        return view('usuarios.index', [
+            'usuarios' => $usuarios,
+            'roles' => User::ROLES,
+            'grados' => Grados::OPCIONES,
+        ]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', 'max:150', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'rol' => ['required', Rule::in(array_keys(User::ROLES))],
-            'estado' => ['required', Rule::in(['activo', 'inactivo'])],
-        ], $this->mensajes());
+        $data = $this->validar($request);
+        $data['name'] = trim($data['nombre'].' '.$data['apellido']);
 
-        User::create($data); // el cast 'hashed' del modelo cifra la contraseña
+        User::create($data);
 
         return redirect()->route('usuarios.index')->with('status', 'Usuario creado correctamente.');
     }
 
     public function update(Request $request, User $usuario)
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($usuario->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'rol' => ['required', Rule::in(array_keys(User::ROLES))],
-            'estado' => ['required', Rule::in(['activo', 'inactivo'])],
-        ], $this->mensajes());
+        $data = $this->validar($request, $usuario);
+        $data['name'] = trim($data['nombre'].' '.$data['apellido']);
 
         if (empty($data['password'])) {
             unset($data['password']); // no cambiar la contraseña si se deja vacía
@@ -73,12 +81,29 @@ class UsuarioController extends Controller
         return back()->with('status', $usuario->estado === 'activo' ? 'Usuario reactivado.' : 'Usuario desactivado.');
     }
 
-    private function mensajes(): array
+    private function validar(Request $request, ?User $actual = null): array
     {
-        return [
-            'email.unique' => 'Ya existe un usuario con ese correo.',
+        return $request->validate([
+            'nombre' => ['required', 'string', 'max:80', 'regex:'.self::REGEX_ALFABETICO],
+            'apellido' => ['required', 'string', 'max:80', 'regex:'.self::REGEX_ALFABETICO],
+            'email' => [
+                'required', 'email', 'max:150',
+                Rule::unique('users', 'email')->ignore($actual?->id),
+                function ($attribute, $value, $fail) {
+                    $dominio = strtolower((string) substr(strrchr($value, '@'), 1));
+                    if (in_array($dominio, self::DOMINIOS_NO_INSTITUCIONALES, true)) {
+                        $fail('Debe usar un correo institucional, no una cuenta personal como Gmail, Hotmail, etc.');
+                    }
+                },
+            ],
+            'password' => [$actual ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
+            'rol' => ['required', Rule::in(array_keys(User::ROLES))],
+            'grado' => ['required', Rule::in(array_keys(Grados::OPCIONES))],
+            'estado' => ['required', Rule::in(['activo', 'inactivo'])],
+        ], [
+            'nombre.regex' => 'El nombre solo puede contener letras.',
+            'apellido.regex' => 'El apellido solo puede contener letras.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
-        ];
+        ]);
     }
 }

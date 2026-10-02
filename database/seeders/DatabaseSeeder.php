@@ -22,21 +22,26 @@ class DatabaseSeeder extends Seeder
     {
         // ---- Usuarios (uno por rol + un inactivo) ----
         foreach ([
-            ['Lic. Carlos Choque', 'carlos.choque@sciem.edu', 'administrador', 'activo'],
-            ['Dra. María Ramos', 'maria.ramos@sciem.edu', 'docente', 'activo'],
-            ['Ing. Jorge Torrez', 'jorge.torrez@sciem.edu', 'control', 'activo'],
-            ['Lic. Andrea Paredes', 'andrea.paredes@sciem.edu', 'docente', 'inactivo'],
-        ] as [$name, $email, $rol, $estado]) {
+            ['Carlos', 'Choque', 'Licenciado(a)', 'carlos.choque@sciem.edu', 'administrador', 'activo'],
+            ['María', 'Ramos', 'Doctor(a)', 'maria.ramos@sciem.edu', 'docente', 'activo'],
+            ['Jorge', 'Torrez', 'Ingeniero(a)', 'jorge.torrez@sciem.edu', 'control', 'activo'],
+            ['Andrea', 'Paredes', 'Licenciado(a)', 'andrea.paredes@sciem.edu', 'docente', 'inactivo'],
+        ] as [$nombre, $apellido, $grado, $email, $rol, $estado]) {
             User::updateOrCreate(['email' => $email], [
-                'name' => $name, 'rol' => $rol, 'estado' => $estado, 'password' => 'password123',
+                'name' => "{$nombre} {$apellido}", 'nombre' => $nombre, 'apellido' => $apellido, 'grado' => $grado,
+                'rol' => $rol, 'estado' => $estado, 'password' => 'password123',
             ]);
         }
 
         // ---- Docentes ----
         $docentes = collect([
-            ['Dra. María Ramos', '4521367'], ['Ing. Luis Fernández', '5123890'], ['Lic. Sonia Vargas', '6034512'],
-            ['Ing. Pablo Mendoza', '4876123'], ['Dr. Ricardo Salinas', '5567431'], ['Lic. Andrea Paredes', '6789012'],
-        ])->map(fn ($d) => Docente::firstOrCreate(['ci' => $d[1]], ['nombre' => $d[0]]));
+            ['María', 'Ramos', 'Doctor(a)', '4521367'], ['Luis', 'Fernández', 'Ingeniero(a)', '5123890'],
+            ['Sonia', 'Vargas', 'Licenciado(a)', '6034512'], ['Pablo', 'Mendoza', 'Ingeniero(a)', '4876123'],
+            ['Ricardo', 'Salinas', 'Doctor(a)', '5567431'], ['Andrea', 'Paredes', 'Licenciado(a)', '6789012'],
+        ])->map(fn ($d) => Docente::firstOrCreate(
+            ['ci' => $d[3]],
+            ['nombre' => $d[0], 'apellido' => $d[1], 'grado' => $d[2]]
+        ));
 
         // ---- Materias + un grupo por materia ----
         $materias = collect([

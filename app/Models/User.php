@@ -19,6 +19,9 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'nombre',
+        'apellido',
+        'grado',
         'email',
         'password',
         'rol',
@@ -31,12 +34,20 @@ class User extends Authenticatable
         'control' => 'Personal de control',
     ];
 
-    /** "Carlos Choque" -> "CC" */
+    /** "Carlos" + "Choque" -> "CC" */
     public function getInicialesAttribute(): string
     {
-        $palabras = preg_split('/\s+/', trim(preg_replace('/^(Lic|Ing|Dr|Dra|Mg|Msc)\.?\s+/i', '', $this->name)));
+        $inicial1 = $this->nombre ? mb_substr($this->nombre, 0, 1) : '';
+        $inicial2 = $this->apellido ? mb_substr($this->apellido, 0, 1) : '';
 
-        return mb_strtoupper(collect($palabras)->take(2)->map(fn ($w) => mb_substr($w, 0, 1))->implode(''));
+        if ($inicial1 === '' && $inicial2 === '') {
+            // Compatibilidad con cuentas antiguas que solo tienen 'name'.
+            $palabras = preg_split('/\s+/', trim(preg_replace('/^(Lic|Ing|Dr|Dra|Mg|Msc)\.?\s+/i', '', $this->name)));
+
+            return mb_strtoupper(collect($palabras)->take(2)->map(fn ($w) => mb_substr($w, 0, 1))->implode(''));
+        }
+
+        return mb_strtoupper($inicial1.$inicial2);
     }
 
     public function getRolEtiquetaAttribute(): string

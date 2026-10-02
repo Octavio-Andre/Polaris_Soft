@@ -24,7 +24,7 @@
                     <tr>
                         <td class="strong">{{ $g->nombre }}</td>
                         <td>{{ $g->materia->nombre ?? '—' }}<span class="sub">{{ $g->materia?->sigla }}</span></td>
-                        <td>{{ $g->docente->nombre ?? 'Sin docente' }}</td>
+                        <td>{{ $g->docente->nombre_completo ?? 'Sin docente' }}</td>
                         <td>
                             <div class="actions">
                                 <button type="button" class="icon-btn" title="Editar" aria-label="Editar"
@@ -78,7 +78,7 @@
                     <select id="g-docente" name="docente_id">
                         <option value="">Sin docente</option>
                         @foreach ($docentes as $d)
-                            <option value="{{ $d->id }}" @selected((string) old('docente_id') === (string) $d->id)>{{ $d->nombre }}</option>
+                            <option value="{{ $d->id }}" @selected((string) old('docente_id') === (string) $d->id)>{{ $d->nombre_completo }}</option>
                         @endforeach
                     </select>
                     @error('docente_id')<p class="err">{{ $message }}</p>@enderror

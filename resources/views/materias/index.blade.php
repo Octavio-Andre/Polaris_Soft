@@ -60,12 +60,12 @@
             <div class="m-body">
                 <div class="field">
                     <label for="m-nombre">Nombre <span class="req">*</span></label>
-                    <input id="m-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Cálculo Multivariable" required>
+                    <input id="m-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Cálculo Multivariable" pattern="[\p{L}\s]+" required>
                     @error('nombre')<p class="err">{{ $message }}</p>@enderror
                 </div>
                 <div class="field">
-                    <label for="m-sigla">Sigla <i>Opcional</i></label>
-                    <input id="m-sigla" name="sigla" value="{{ old('sigla') }}" placeholder="MAT-201">
+                    <label for="m-sigla">Sigla <span class="req">*</span></label>
+                    <input id="m-sigla" name="sigla" value="{{ old('sigla') }}" placeholder="MAT-201" required>
                     @error('sigla')<p class="err">{{ $message }}</p>@enderror
                 </div>
             </div>

@@ -15,13 +15,6 @@
     @if (session('status')) <div class="flash" role="status">{{ session('status') }}</div> @endif
     @if (session('error')) <div class="flash err" role="alert">{{ session('error') }}</div> @endif
 
-    <div class="banner">
-        <span class="ic"><svg class="i"><use href="#i-shield"/></svg></span>
-        <div><b>Control de acceso basado en roles (RBAC) · Sprint 1</b>
-            <small>Define qué módulos puede ver cada usuario según su rol: administrador, docente o personal de control.</small></div>
-        <span class="right"><svg class="i sm"><use href="#i-check"/></svg> Layout RBAC activo</span>
-    </div>
-
     <section class="card" style="margin-top:16px">
         <form class="toolbar two" method="GET" action="{{ route('usuarios.index') }}" style="margin:0;padding:14px 16px;align-items:center">
             <label class="search">
@@ -39,7 +32,7 @@
                 <tbody>
                 @forelse ($usuarios as $u)
                     @php
-                        $payload = ['name' => $u->name, 'email' => $u->email, 'rol' => $u->rol, 'estado' => $u->estado];
+                        $payload = ['nombre' => $u->nombre, 'apellido' => $u->apellido, 'grado' => $u->grado, 'email' => $u->email, 'rol' => $u->rol, 'estado' => $u->estado];
                         $url = route('usuarios.update', $u);
                         $activo = $u->estado === 'activo';
                     @endphp
@@ -93,14 +86,32 @@
             </div>
 
             <div class="m-body">
+                <div class="row2">
+                    <div class="field">
+                        <label for="u-nombre">Nombre <span class="req">*</span></label>
+                        <input id="u-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Carlos" pattern="[\p{L}\s]+" required>
+                        @error('nombre')<p class="err">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="u-apellido">Apellido <span class="req">*</span></label>
+                        <input id="u-apellido" name="apellido" value="{{ old('apellido') }}" placeholder="Choque" pattern="[\p{L}\s]+" required>
+                        @error('apellido')<p class="err">{{ $message }}</p>@enderror
+                    </div>
+                </div>
                 <div class="field">
-                    <label for="u-name">Nombre completo <span class="req">*</span></label>
-                    <input id="u-name" name="name" value="{{ old('name') }}" placeholder="Ej: Lic. Carlos Choque" required>
-                    @error('name')<p class="err">{{ $message }}</p>@enderror
+                    <label for="u-grado">Grado académico <span class="req">*</span></label>
+                    <select id="u-grado" name="grado" data-default="Licenciado(a)" required>
+                        <option value="">Seleccione el grado…</option>
+                        @foreach ($grados as $g)
+                            <option value="{{ $g }}" @selected(old('grado') === $g)>{{ $g }}</option>
+                        @endforeach
+                    </select>
+                    @error('grado')<p class="err">{{ $message }}</p>@enderror
                 </div>
                 <div class="field">
                     <label for="u-email">Correo institucional <span class="req">*</span></label>
                     <input id="u-email" type="email" name="email" value="{{ old('email') }}" placeholder="usuario@universidad.edu" required>
+                    <p class="muted" style="font-size:12px;margin-top:4px">No se aceptan correos personales (Gmail, Hotmail, etc.), solo institucionales.</p>
                     @error('email')<p class="err">{{ $message }}</p>@enderror
                 </div>
                 <div class="row2">
