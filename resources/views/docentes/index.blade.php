@@ -17,18 +17,22 @@
     <section class="card" style="margin-top:20px">
         <div class="scroll">
             <table>
-                <thead><tr><th>Nombre completo</th><th>CI</th><th>Grupos a cargo</th><th style="text-align:right">Acciones</th></tr></thead>
+                <thead><tr><th>Nombre completo</th><th>Grado</th><th>CI</th><th>Grupos a cargo</th><th style="text-align:right">Acciones</th></tr></thead>
                 <tbody>
                 @forelse ($docentes as $d)
-                    @php $url = route('docentes.update', $d); @endphp
+                    @php
+                        $payload = $d->only(['nombre', 'apellido', 'grado', 'ci']);
+                        $url = route('docentes.update', $d);
+                    @endphp
                     <tr>
-                        <td class="strong">{{ $d->nombre }}</td>
+                        <td class="strong">{{ $d->nombre_completo }}</td>
+                        <td>{{ $d->grado }}</td>
                         <td class="num">{{ $d->ci }}</td>
                         <td class="num">{{ $d->grupos_count }}</td>
                         <td>
                             <div class="actions">
                                 <button type="button" class="icon-btn" title="Editar" aria-label="Editar"
-                                        data-edit="{{ json_encode($d->only(['nombre', 'ci'])) }}" data-url="{{ $url }}" data-id="{{ $d->id }}">
+                                        data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $d->id }}">
                                     <svg class="i"><use href="#i-edit"/></svg></button>
                                 <form method="POST" action="{{ $url }}" onsubmit="return confirm('¿Eliminar a este docente? Sus grupos quedarán sin docente.')">
                                     @csrf @method('DELETE')
@@ -38,7 +42,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="empty">Aún no hay docentes registrados.</td></tr>
+                    <tr><td colspan="5" class="empty">Aún no hay docentes registrados.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -58,14 +62,31 @@
                 <button type="button" class="icon-btn x" aria-label="Cerrar" onclick="this.closest('dialog').close()"><svg class="i"><use href="#i-x"/></svg></button>
             </div>
             <div class="m-body">
-                <div class="field">
-                    <label for="d-nombre">Nombre completo <span class="req">*</span></label>
-                    <input id="d-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Dra. María Ramos" required>
-                    @error('nombre')<p class="err">{{ $message }}</p>@enderror
+                <div class="row2">
+                    <div class="field">
+                        <label for="d-nombre">Nombre <span class="req">*</span></label>
+                        <input id="d-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="María" pattern="[\p{L}\s]+" required>
+                        @error('nombre')<p class="err">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="d-apellido">Apellido <span class="req">*</span></label>
+                        <input id="d-apellido" name="apellido" value="{{ old('apellido') }}" placeholder="Ramos" pattern="[\p{L}\s]+" required>
+                        @error('apellido')<p class="err">{{ $message }}</p>@enderror
+                    </div>
                 </div>
                 <div class="field">
-                    <label for="d-ci">CI <span class="req">*</span></label>
-                    <input id="d-ci" name="ci" value="{{ old('ci') }}" placeholder="4521367" required>
+                    <label for="d-grado">Grado académico <span class="req">*</span></label>
+                    <select id="d-grado" name="grado" data-default="Licenciado(a)" required>
+                        <option value="">Seleccione el grado…</option>
+                        @foreach ($grados as $g)
+                            <option value="{{ $g }}" @selected(old('grado') === $g)>{{ $g }}</option>
+                        @endforeach
+                    </select>
+                    @error('grado')<p class="err">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="d-ci">CI <i>Solo números, 5 a 10 dígitos</i></label>
+                    <input id="d-ci" name="ci" value="{{ old('ci') }}" placeholder="4521367" inputmode="numeric" pattern="[0-9]{5,10}" minlength="5" maxlength="10" required>
                     @error('ci')<p class="err">{{ $message }}</p>@enderror
                 </div>
             </div>
