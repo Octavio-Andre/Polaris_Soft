@@ -65,12 +65,12 @@
                 <div class="row2">
                     <div class="field">
                         <label for="d-nombre">Nombre <span class="req">*</span></label>
-                        <input id="d-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="María" pattern="[\p{L}\s]+" required>
+                        <input id="d-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="María" pattern="[\p{L}\s]+" oninput="soloLetras(this)" required>
                         @error('nombre')<p class="err">{{ $message }}</p>@enderror
                     </div>
                     <div class="field">
                         <label for="d-apellido">Apellido <span class="req">*</span></label>
-                        <input id="d-apellido" name="apellido" value="{{ old('apellido') }}" placeholder="Ramos" pattern="[\p{L}\s]+" required>
+                        <input id="d-apellido" name="apellido" value="{{ old('apellido') }}" placeholder="Ramos" pattern="[\p{L}\s]+" oninput="soloLetras(this)" required>
                         @error('apellido')<p class="err">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -86,7 +86,7 @@
                 </div>
                 <div class="field">
                     <label for="d-ci">CI <i>Solo números, 5 a 10 dígitos</i></label>
-                    <input id="d-ci" name="ci" value="{{ old('ci') }}" placeholder="4521367" inputmode="numeric" pattern="[0-9]{5,10}" minlength="5" maxlength="10" required>
+                    <input id="d-ci" name="ci" value="{{ old('ci') }}" placeholder="4521367" inputmode="numeric" pattern="[0-9]{5,10}" minlength="5" maxlength="10" oninput="soloNumeros(this)" required>
                     @error('ci')<p class="err">{{ $message }}</p>@enderror
                 </div>
             </div>

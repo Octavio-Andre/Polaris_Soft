@@ -60,7 +60,7 @@
             <div class="m-body">
                 <div class="field">
                     <label for="m-nombre">Nombre <span class="req">*</span></label>
-                    <input id="m-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Cálculo Multivariable" pattern="[\p{L}\s]+" required>
+                    <input id="m-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Cálculo Multivariable" pattern="[\p{L}\s]+" oninput="soloLetras(this)" required>
                     @error('nombre')<p class="err">{{ $message }}</p>@enderror
                 </div>
                 <div class="field">

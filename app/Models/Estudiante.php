@@ -12,14 +12,22 @@ class Estudiante extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'codigo_universitario', 'documento_identidad', 'nombres', 'apellidos',
-        'carrera', 'correo_institucional', 'estado',
+        'facultad', 'codigo_universitario', 'documento_identidad', 'ci_complemento',
+        'nombres', 'apellidos', 'carrera', 'correo_institucional', 'estado',
     ];
 
     /** "Romero Silva, Gabriel Fernando" */
     public function getNombreCompletoAttribute(): string
     {
         return "{$this->apellidos}, {$this->nombres}";
+    }
+
+    /** "7123456-A1" (con complemento) o "7123456" (sin él). */
+    public function getCarnetCompletoAttribute(): string
+    {
+        return $this->ci_complemento
+            ? "{$this->documento_identidad}-{$this->ci_complemento}"
+            : $this->documento_identidad;
     }
 
     public function scopeBuscar(Builder $q, ?string $texto): Builder

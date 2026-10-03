@@ -9,6 +9,9 @@ use Illuminate\Validation\Rule;
 
 class ExamenController extends Controller
 {
+    /** Letras, espacios, acentos y ñ (sin números ni símbolos). */
+    private const REGEX_ALFABETICO = '/^[\pL\s]+$/u';
+
     public function index(Request $request)
     {
         $examenes = Examen::with(['materia' => fn ($q) => $q->withCount('asignaciones')])
@@ -55,7 +58,7 @@ class ExamenController extends Controller
     {
         return $request->validate([
             'materia_id' => ['required', 'exists:materias,id'],
-            'carrera' => ['nullable', 'string', 'max:120'],
+            'carrera' => ['nullable', 'string', 'max:120', 'regex:'.self::REGEX_ALFABETICO],
             'fecha' => ['required', 'date'],
             'hora_inicio' => ['required', 'date_format:H:i'],
             'duracion_min' => ['required', 'integer', 'min:15', 'max:480'],
@@ -67,6 +70,7 @@ class ExamenController extends Controller
         ], [
             'materia_id.required' => 'Selecciona una asignatura.',
             'hora_inicio.date_format' => 'La hora debe tener el formato HH:MM.',
+            'carrera.regex' => 'La carrera solo puede contener letras.',
         ]);
     }
 }

@@ -25,7 +25,7 @@
 
         <div class="notice">
             <svg class="i sm"><use href="#i-info"/></svg>
-            <span>Ingrese con su cuenta institucional. Por seguridad, el acceso está restringido a personal autorizado.</span>
+            <span>Ingrese con su cuenta institucional. Por seguridad, el acceso está restringido a personal no autorizado.</span>
         </div>
 
         <div class="field">

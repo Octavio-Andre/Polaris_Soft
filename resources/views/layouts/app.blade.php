@@ -75,6 +75,22 @@
     </div>
 </div>
 
+{{-- Modal de confirmación compartido: lo usa confirmarEliminar() desde public/js/sciem.js --}}
+<dialog id="modal-confirmar" class="dialog-sm">
+    <div class="m-head">
+        <span class="ic" style="background:var(--danger-bg);color:var(--danger)"><svg class="i"><use href="#i-trash"/></svg></span>
+        <div><b>Confirmar eliminación</b></div>
+        <button type="button" class="icon-btn x" aria-label="Cerrar" onclick="this.closest('dialog').close()"><svg class="i"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="m-body">
+        <p data-confirmar-mensaje>¿Eliminar este registro?</p>
+    </div>
+    <div class="m-foot">
+        <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancelar</button>
+        <button type="button" class="btn" style="background:var(--danger)" data-confirmar-ok>Eliminar</button>
+    </div>
+</dialog>
+
 <script src="{{ asset('js/sciem.js') }}"></script>
 @stack('scripts')
 </body>
