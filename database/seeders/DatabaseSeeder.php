@@ -9,8 +9,8 @@ use App\Models\Examen;
 use App\Models\Grupo;
 use App\Models\Materia;
 use App\Models\User;
+use App\Support\Catalogo;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
             ['Álgebra Lineal', 'MAT-102', 'Ingeniería Industrial'],
             ['Base de Datos I', 'INF-240', 'Ingeniería de Sistemas'],
         ])->map(function ($m, $i) use ($docentes) {
-            $materia = Materia::firstOrCreate(['sigla' => $m[1]], ['nombre' => $m[0]]);
+            $materia = Materia::updateOrCreate(['sigla' => $m[1]], ['nombre' => $m[0], 'carrera' => $m[2]]);
             Grupo::firstOrCreate(
                 ['materia_id' => $materia->id, 'nombre' => 'Grupo A'],
                 ['docente_id' => $docentes[$i % $docentes->count()]->id]
@@ -71,13 +71,16 @@ class DatabaseSeeder extends Seeder
             ['Andrea Paola', 'Choque Mendoza'], ['Luis Fernando', 'Terrazas Peña'], ['Camila', 'Zambrana Rivero'],
         ];
         foreach ($nombres as $i => [$nom, $ape]) {
-            $codigo = sprintf('2024-%05d', 34 + $i * 7);
+            // Código universitario: 9 dígitos, empieza con el año (2024 + 5 dígitos correlativos).
+            $codigo = '2024'.sprintf('%05d', 34 + $i * 7);
+            $carrera = $carreras[$i % count($carreras)];
             $est = Estudiante::firstOrCreate(['codigo_universitario' => $codigo], [
-                'documento_identidad' => (string) (7100000 + $i * 1379),
+                'facultad' => Catalogo::facultadDeCarrera($carrera) ?? array_key_first(Catalogo::FACULTADES),
+                'documento_identidad' => (string) (71000 + $i * 1379), // 5-10 dígitos
                 'nombres' => $nom,
                 'apellidos' => $ape,
-                'carrera' => $carreras[$i % count($carreras)],
-                'correo_institucional' => Str::lower(Str::ascii(explode(' ', $nom)[0].'.'.explode(' ', $ape)[0])).'@estudiantes.edu',
+                'carrera' => $carrera,
+                'correo_institucional' => $codigo.'@universidad.edu',
                 'estado' => $i === 4 ? 'OBSERVADO' : ($i === 9 ? 'INACTIVO' : 'ACTIVO'),
             ]);
 

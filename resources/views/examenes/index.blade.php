@@ -87,9 +87,11 @@
                                 <button type="button" class="icon-btn" title="Editar" aria-label="Editar"
                                         data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $e->id }}" @disabled($e->estado === 'finalizado')>
                                     <svg class="i"><use href="#i-edit"/></svg></button>
-                                <form method="POST" action="{{ $url }}" onsubmit="return confirm('¿Eliminar este examen? Esta acción no se puede deshacer.')">
+                                <form method="POST" action="{{ $url }}">
                                     @csrf @method('DELETE')
-                                    <button class="icon-btn danger" type="submit" title="Eliminar" aria-label="Eliminar"><svg class="i"><use href="#i-trash"/></svg></button>
+                                    <button class="icon-btn danger" type="button" title="Eliminar" aria-label="Eliminar"
+                                            onclick="confirmarEliminar(this.closest('form'), '¿Eliminar este examen? Esta acción no se puede deshacer.')">
+                                        <svg class="i"><use href="#i-trash"/></svg></button>
                                 </form>
                             </div>
                         </td>
@@ -155,7 +157,8 @@
                     </div>
                     <div class="field">
                         <label for="x-carrera">Carrera <i>Opcional</i></label>
-                        <input id="x-carrera" name="carrera" value="{{ old('carrera') }}" placeholder="Ingeniería de Sistemas">
+                        <input id="x-carrera" name="carrera" value="{{ old('carrera') }}" placeholder="Ingeniería de Sistemas"
+                               pattern="[\p{L}\s]+" title="Solo letras" oninput="soloLetras(this)">
                         @error('carrera')<p class="err">{{ $message }}</p>@enderror
                     </div>
                 </div>

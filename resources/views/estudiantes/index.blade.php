@@ -9,9 +9,14 @@
             <h1>Gestión de estudiantes</h1>
             <p>Registrar y administrar estudiantes que participarán en los exámenes.</p>
         </div>
-        <button type="button" class="btn" id="btn-nuevo-estudiante">
-            <svg class="i"><use href="#i-user-plus"/></svg> Nuevo estudiante
-        </button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="btn ghost" href="{{ route('estudiantes.importar.form') }}">
+                <svg class="i"><use href="#i-arrow"/></svg> Importar desde CSV
+            </a>
+            <button type="button" class="btn" id="btn-nuevo-estudiante">
+                <svg class="i"><use href="#i-user-plus"/></svg> Nuevo estudiante
+            </button>
+        </div>
     </div>
 
     @if (session('status')) <div class="flash" role="status">{{ session('status') }}</div> @endif
@@ -60,21 +65,21 @@
                 <thead>
                     <tr>
                         <th>Código universitario</th><th>Nombre completo</th><th>CI / DNI</th>
-                        <th>Carrera</th><th>Correo institucional</th><th>Estado</th>
+                        <th>Facultad / Carrera</th><th>Correo institucional</th><th>Estado</th>
                         <th style="text-align:right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                 @forelse ($estudiantes as $e)
                     @php
-                        $payload = $e->only(['codigo_universitario', 'documento_identidad', 'nombres', 'apellidos', 'carrera', 'correo_institucional', 'estado']);
+                        $payload = $e->only(['facultad', 'codigo_universitario', 'documento_identidad', 'ci_complemento', 'nombres', 'apellidos', 'carrera', 'estado']);
                         $url = route('estudiantes.update', $e);
                     @endphp
                     <tr>
                         <td class="strong num">{{ $e->codigo_universitario }}</td>
                         <td class="strong">{{ $e->nombre_completo }}</td>
-                        <td class="num">{{ $e->documento_identidad }}</td>
-                        <td>{{ $e->carrera }}</td>
+                        <td class="num">{{ $e->carnet_completo }}</td>
+                        <td>{{ $e->carrera }}<span class="sub">{{ $e->facultad }}</span></td>
                         <td class="mail">{{ $e->correo_institucional }}</td>
                         <td><span class="badge {{ strtolower($e->estado) }}">{{ ucfirst(strtolower($e->estado)) }}</span></td>
                         <td>
@@ -87,10 +92,10 @@
                                     <svg class="i"><use href="#i-edit"/></svg></button>
                                 <a class="icon-btn" href="{{ route('asignaciones.create', $e) }}" title="Asignar materia, grupo y docente" aria-label="Asignar materia, grupo y docente">
                                     <svg class="i"><use href="#i-exams"/></svg></a>
-                                <form method="POST" action="{{ $url }}"
-                                      onsubmit="return confirm('¿Eliminar a este estudiante? Esta acción no se puede deshacer.')">
+                                <form method="POST" action="{{ $url }}">
                                     @csrf @method('DELETE')
-                                    <button class="icon-btn danger" type="submit" title="Eliminar" aria-label="Eliminar">
+                                    <button class="icon-btn danger" type="button" title="Eliminar" aria-label="Eliminar"
+                                            onclick="confirmarEliminar(this.closest('form'), '¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}? Esta acción no se puede deshacer.')">
                                         <svg class="i"><use href="#i-trash"/></svg></button>
                                 </form>
                             </div>
@@ -141,43 +146,67 @@
             <div class="m-body">
                 <div class="row2">
                     <div class="field">
-                        <label for="e-codigo">Código universitario <span class="req">*</span></label>
-                        <input id="e-codigo" name="codigo_universitario" value="{{ old('codigo_universitario') }}" placeholder="2024-00034" required>
-                        @error('codigo_universitario')<p class="err">{{ $message }}</p>@enderror
+                        <label for="e-facultad">Facultad <span class="req">*</span></label>
+                        <select id="e-facultad" name="facultad" required>
+                            <option value="">Seleccione la facultad…</option>
+                            @foreach (array_keys($facultades) as $f)
+                                <option value="{{ $f }}" @selected(old('facultad') === $f)>{{ $f }}</option>
+                            @endforeach
+                        </select>
+                        @error('facultad')<p class="err">{{ $message }}</p>@enderror
                     </div>
                     <div class="field">
-                        <label for="e-ci">CI / DNI <span class="req">*</span></label>
-                        <input id="e-ci" name="documento_identidad" value="{{ old('documento_identidad') }}" placeholder="7123456" required>
-                        @error('documento_identidad')<p class="err">{{ $message }}</p>@enderror
+                        <label for="e-carrera">Carrera <span class="req">*</span></label>
+                        <select id="e-carrera" name="carrera" required>
+                            <option value="">Primero elija la facultad…</option>
+                        </select>
+                        @error('carrera')<p class="err">{{ $message }}</p>@enderror
                     </div>
                 </div>
+
+                <div class="field">
+                    <label for="e-codigo">Código universitario <i>9 dígitos, empieza con el año</i> <span class="req">*</span></label>
+                    <input id="e-codigo" name="codigo_universitario" value="{{ old('codigo_universitario') }}"
+                           placeholder="202400034" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" oninput="soloNumeros(this)" required>
+                    @error('codigo_universitario')<p class="err">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="row-codigo">
+                    <div class="field">
+                        <label for="e-ci">CI / DNI <i>solo números, 5 a 10 dígitos</i> <span class="req">*</span></label>
+                        <input id="e-ci" name="documento_identidad" value="{{ old('documento_identidad') }}"
+                               placeholder="7123456" inputmode="numeric" maxlength="10" pattern="[0-9]{5,10}" oninput="soloNumeros(this)" required>
+                        @error('documento_identidad')<p class="err">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="e-complemento">Compl. <i>opc.</i></label>
+                        <input id="e-complemento" name="ci_complemento" value="{{ old('ci_complemento') }}"
+                               placeholder="A1" maxlength="2">
+                        @error('ci_complemento')<p class="err">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
                 <div class="row2">
                     <div class="field">
                         <label for="e-nombres">Nombres <span class="req">*</span></label>
-                        <input id="e-nombres" name="nombres" value="{{ old('nombres') }}" placeholder="Gabriel Fernando" required>
+                        <input id="e-nombres" name="nombres" value="{{ old('nombres') }}" placeholder="Gabriel Fernando"
+                               pattern="[\p{L}\s]+" title="Solo letras" oninput="soloLetras(this)" required>
                         @error('nombres')<p class="err">{{ $message }}</p>@enderror
                     </div>
                     <div class="field">
                         <label for="e-apellidos">Apellidos <span class="req">*</span></label>
-                        <input id="e-apellidos" name="apellidos" value="{{ old('apellidos') }}" placeholder="Romero Silva" required>
+                        <input id="e-apellidos" name="apellidos" value="{{ old('apellidos') }}" placeholder="Romero Silva"
+                               pattern="[\p{L}\s]+" title="Solo letras" oninput="soloLetras(this)" required>
                         @error('apellidos')<p class="err">{{ $message }}</p>@enderror
                     </div>
                 </div>
+
                 <div class="field">
-                    <label for="e-carrera">Carrera <span class="req">*</span></label>
-                    <select id="e-carrera" name="carrera" required>
-                        <option value="">Seleccione la carrera…</option>
-                        @foreach ($carreras as $c)
-                            <option value="{{ $c }}" @selected(old('carrera') === $c)>{{ $c }}</option>
-                        @endforeach
-                    </select>
-                    @error('carrera')<p class="err">{{ $message }}</p>@enderror
+                    <label for="e-correo">Correo institucional <i>se genera solo, a partir del código</i></label>
+                    <input id="e-correo" type="text" value="" placeholder="Se completa al escribir el código…" readonly
+                           style="background:var(--soft);color:var(--muted)">
                 </div>
-                <div class="field">
-                    <label for="e-correo">Correo institucional</label>
-                    <input id="e-correo" type="email" name="correo_institucional" value="{{ old('correo_institucional') }}" placeholder="estudiante@universidad.edu">
-                    @error('correo_institucional')<p class="err">{{ $message }}</p>@enderror
-                </div>
+
                 <div class="field">
                     <label>Estado <span class="req">*</span></label>
                     <div class="radios three">
@@ -200,15 +229,42 @@
 @push('scripts')
 <script>
     const MODAL = 'modal-estudiante';
-    document.getElementById('btn-nuevo-estudiante').addEventListener('click', () =>
-        abrirForm(MODAL, { url: '{{ route('estudiantes.store') }}', method: 'POST', title: 'Registrar estudiante' }));
+    const FACULTADES = @json($facultades); // { "Ingeniería": ["Ing. de Sistemas", ...], ... }
+
+    const selFacultad = document.getElementById('e-facultad');
+    const selCarrera = document.getElementById('e-carrera');
+    const inCodigo = document.getElementById('e-codigo');
+    const inCorreo = document.getElementById('e-correo');
+
+    // Rellena el desplegable de carrera según la facultad elegida.
+    function cargarCarreras(carreraSeleccionada) {
+        const lista = FACULTADES[selFacultad.value] || [];
+        selCarrera.innerHTML = '<option value="">' + (lista.length ? 'Seleccione la carrera…' : 'Primero elija la facultad…') + '</option>'
+            + lista.map(c => `<option value="${c}" ${c === carreraSeleccionada ? 'selected' : ''}>${c}</option>`).join('');
+    }
+    selFacultad.addEventListener('change', () => cargarCarreras(null));
+
+    // El correo siempre es "codigo@universidad.edu" (sin posibilidad de escribirlo a mano).
+    function actualizarCorreo() {
+        inCorreo.value = inCodigo.value.length === 9 ? inCodigo.value + '@universidad.edu' : '';
+    }
+    inCodigo.addEventListener('input', actualizarCorreo);
+
+    document.getElementById('btn-nuevo-estudiante').addEventListener('click', () => {
+        abrirForm(MODAL, { url: '{{ route('estudiantes.store') }}', method: 'POST', title: 'Registrar estudiante' });
+        cargarCarreras(null);
+        actualizarCorreo();
+    });
 
     document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => {
         const ver = b.dataset.mode === 'ver';
+        const values = JSON.parse(b.dataset.edit);
         abrirForm(MODAL, {
             url: b.dataset.url, method: 'PUT', editing: b.dataset.id, ro: ver,
-            values: JSON.parse(b.dataset.edit), title: ver ? 'Detalle del estudiante' : 'Editar estudiante',
+            values, title: ver ? 'Detalle del estudiante' : 'Editar estudiante',
         });
+        cargarCarreras(values.carrera || null);
+        actualizarCorreo();
     }));
 
     @if ($errors->any() && old('_form') === 'estudiante')
@@ -218,6 +274,8 @@
             method: '{{ old('_editing') ? 'PUT' : 'POST' }}',
             title: '{{ old('_editing') ? 'Editar estudiante' : 'Registrar estudiante' }}',
         });
+        cargarCarreras('{{ old('carrera') }}');
+        actualizarCorreo();
     @endif
 </script>
 @endpush

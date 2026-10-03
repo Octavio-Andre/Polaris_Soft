@@ -167,6 +167,9 @@ td.mail,.muted{color:var(--muted)}
 
 /* ---------- Modales (<dialog>) ---------- */
 dialog{border:0;border-radius:14px;padding:0;width:min(560px,calc(100vw - 32px));box-shadow:0 24px 60px rgba(7,26,64,.35);margin:auto;overflow:hidden}
+dialog.dialog-sm{width:min(400px,calc(100vw - 32px))}
+.dialog-sm .m-body{padding-top:4px}
+.dialog-sm .m-body p{color:var(--text)}
 dialog::backdrop{background:rgba(7,26,64,.55);backdrop-filter:blur(2px)}
 .m-head{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
 .m-head .ic{width:38px;height:38px;border-radius:9px;background:var(--blue-100);color:var(--blue-700);display:grid;place-items:center}
@@ -175,6 +178,7 @@ dialog::backdrop{background:rgba(7,26,64,.55);backdrop-filter:blur(2px)}
 .m-head .x{margin-left:auto}
 .m-body{padding:18px 22px;display:grid;gap:14px;max-height:70vh;overflow:auto}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row-codigo{display:grid;grid-template-columns:1fr 90px;gap:14px}
 .field label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
 .field label i{font-style:normal;font-weight:400;color:var(--muted)}
 .field label .req{color:var(--danger)}

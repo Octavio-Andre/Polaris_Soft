@@ -89,12 +89,12 @@
                 <div class="row2">
                     <div class="field">
                         <label for="u-nombre">Nombre <span class="req">*</span></label>
-                        <input id="u-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Carlos" pattern="[\p{L}\s]+" required>
+                        <input id="u-nombre" name="nombre" value="{{ old('nombre') }}" placeholder="Carlos" pattern="[\p{L}\s]+" oninput="soloLetras(this)" required>
                         @error('nombre')<p class="err">{{ $message }}</p>@enderror
                     </div>
                     <div class="field">
                         <label for="u-apellido">Apellido <span class="req">*</span></label>
-                        <input id="u-apellido" name="apellido" value="{{ old('apellido') }}" placeholder="Choque" pattern="[\p{L}\s]+" required>
+                        <input id="u-apellido" name="apellido" value="{{ old('apellido') }}" placeholder="Choque" pattern="[\p{L}\s]+" oninput="soloLetras(this)" required>
                         @error('apellido')<p class="err">{{ $message }}</p>@enderror
                     </div>
                 </div>
