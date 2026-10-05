@@ -63,9 +63,6 @@
         const quitar = document.createElement('form');
         quitar.method = 'POST';
         quitar.action = form.dataset.deleteUrlTemplate.replace('__ASIGNACION__', encodeURIComponent(asignacion.id));
-        quitar.addEventListener('submit', (event) => {
-            if (!window.confirm('¿Quitar esta asignación?')) event.preventDefault();
-        });
         [['_token', csrf], ['_method', 'DELETE']].forEach(([nombre, valor]) => {
             const campo = document.createElement('input');
             campo.type = 'hidden';
@@ -74,10 +71,11 @@
             quitar.append(campo);
         });
         const boton = document.createElement('button');
-        boton.type = 'submit';
+        boton.type = 'button';
         boton.className = 'icon-btn danger';
         boton.title = 'Quitar';
         boton.setAttribute('aria-label', 'Quitar ' + nombres[0]);
+        boton.addEventListener('click', () => confirmarEliminar(quitar, '¿Quitar esta asignación?'));
         const icono = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         icono.setAttribute('class', 'i');
         icono.setAttribute('aria-hidden', 'true');

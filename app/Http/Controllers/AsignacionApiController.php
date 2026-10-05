@@ -31,9 +31,12 @@ class AsignacionApiController extends Controller
     {
         $docentes = $grupo->docente_id === null
             ? collect()
-            : collect([$grupo->docente()->first(['id', 'nombre'])])->filter();
+            : collect([$grupo->docente()->first(['id', 'nombre', 'apellido', 'grado'])])->filter();
 
-        return response()->json(['data' => $docentes->values()]);
+        return response()->json(['data' => $docentes->map(fn ($docente) => [
+            'id' => $docente->id,
+            'nombre' => $docente->nombre_completo,
+        ])->values()]);
     }
 
     public function store(Request $request, Estudiante $estudiante): JsonResponse

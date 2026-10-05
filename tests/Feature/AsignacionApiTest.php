@@ -81,6 +81,17 @@ class AsignacionApiTest extends TestCase
         $this->getJson('/api/grupos/'.$grupo->id.'/docentes')->assertOk()->assertExactJson(['data' => []]);
     }
 
+    public function test_api_y_listado_conservan_el_apellido_y_grado_del_docente(): void
+    {
+        $this->docente->update(['nombre' => 'Ana', 'apellido' => 'Alcocer', 'grado' => 'Doctor(a)']);
+        $this->actingAs($this->admin)->getJson('/api/grupos/'.$this->grupo->id.'/docentes')
+            ->assertOk()->assertExactJson(['data' => [[
+                'id' => $this->docente->id, 'nombre' => 'Doctor(a) Ana Alcocer',
+            ]]]);
+        $this->postJson('/api/estudiantes/42/asignaciones', $this->datos())->assertCreated();
+        $this->get('/estudiantes/42/asignaciones')->assertOk()->assertSee('Doctor(a) Ana Alcocer');
+    }
+
     public function test_guarda_la_asignacion_con_id_estudiante(): void
     {
         $this->actingAs($this->admin)->postJson('/api/estudiantes/42/asignaciones', $this->datos())
