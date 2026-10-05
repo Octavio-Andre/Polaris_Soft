@@ -8,12 +8,22 @@ use App\Http\Controllers\EstudianteController;
 use App\Http\Controllers\ExamenController;
 use App\Http\Controllers\GrupoController;
 use App\Http\Controllers\MateriaController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 // --- Login / Logout ---
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login')->middleware('guest');
 Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
+
+// --- Recuperación de contraseña ---
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
+});
+
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 // --- Inicio: siempre pasa por el login / dashboard según rol ---

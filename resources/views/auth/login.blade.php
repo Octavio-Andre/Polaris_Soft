@@ -23,6 +23,13 @@
         <h1>Sistema de Control de Exámenes</h1>
         <p class="lead">Acceso al sistema</p>
 
+        @if (session('status'))
+            <div class="status" role="status">
+                <svg class="i sm"><use href="#i-check"/></svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
         <div class="notice">
             <svg class="i sm"><use href="#i-info"/></svg>
             <span>Ingrese con su cuenta institucional. Por seguridad, el acceso está restringido a personal no autorizado.</span>
@@ -51,7 +58,7 @@
 
         <div class="opts">
             <label><input type="checkbox" name="remember" value="1"> Recordarme</label>
-            <a href="#">¿Olvidó su contraseña?</a>
+            <a href="{{ route('password.request') }}">¿Olvidó su contraseña?</a>
         </div>
 
         <button class="btn block" type="submit">
