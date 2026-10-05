@@ -79,13 +79,13 @@
                     <tr data-asignacion-id="{{ $asignacion->id }}">
                         <td class="strong">{{ $asignacion->materia->nombre ?? '—' }}</td>
                         <td>{{ $asignacion->grupo->nombre ?? '—' }}</td>
-                        <td>{{ $asignacion->docente->nombre ?? 'Sin docente' }}</td>
+                        <td>{{ $asignacion->docente->nombre_completo ?? 'Sin docente' }}</td>
                         <td>
                             <div class="actions">
-                                <form method="POST" action="{{ route('asignaciones.destroy', $asignacion) }}"
-                                      onsubmit="return confirm('¿Quitar esta asignación?')">
+                                <form method="POST" action="{{ route('asignaciones.destroy', $asignacion) }}">
                                     @csrf @method('DELETE')
-                                    <button class="icon-btn danger" type="submit" title="Quitar" aria-label="Quitar {{ $asignacion->materia->nombre ?? 'asignación' }}">
+                                    <button class="icon-btn danger" type="button" title="Quitar" aria-label="Quitar {{ $asignacion->materia->nombre ?? 'asignación' }}"
+                                            onclick="confirmarEliminar(this.closest('form'), '¿Quitar esta asignación?')">
                                         <svg class="i"><use href="#i-trash"/></svg>
                                     </button>
                                 </form>

@@ -39,7 +39,7 @@ class AsignacionController extends Controller
                 return [
                     'id' => $grupo->docente_id,
                     'grupo_id' => $grupo->id,
-                    'nombre' => $grupo->docente ? $grupo->docente->nombre : null,
+                    'nombre' => $grupo->docente ? $grupo->docente->nombre_completo : null,
                 ];
             })->filter(function (array $docente) {
                 return $docente['nombre'] !== null;
