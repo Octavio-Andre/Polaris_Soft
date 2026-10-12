@@ -46,6 +46,8 @@
                     <svg class="i"><use href="#i-users"/></svg> Usuarios</a>
             @endif
             @if ($es('administrador', 'control'))
+                <a href="{{ route('verificacion.index') }}" @class(['active' => request()->routeIs('verificacion.*')])>
+                    <svg class="i"><use href="#i-check"/></svg> Verificación</a>
                 <a href="{{ route('transparencia.index') }}" @class(['active' => request()->routeIs('transparencia.*')])>
                     <svg class="i"><use href="#i-shield"/></svg> Transparencia</a>
             @endif

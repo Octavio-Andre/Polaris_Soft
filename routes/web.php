@@ -13,6 +13,7 @@ use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\TransparenciaIngresoController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\VerificacionController;
 use Illuminate\Support\Facades\Route;
 
 // --- Login / Logout ---
@@ -79,21 +80,17 @@ Route::middleware(['auth', 'role:control'])->group(function () {
     Route::get('/control/dashboard', fn () => view('control.dashboard'));
 });
 
-// --- Verificar ci docente y administrador ---
-// --- Administrador y Docente ---
-
-
+// --- Verificación de ingreso ---
+Route::middleware(['auth', 'role:administrador,control'])->group(function () {
+    Route::get('/verificacion', [VerificacionController::class, 'index'])->name('verificacion.index');
+    Route::post('/verificacion/verificar', [VerificacionController::class, 'verificar'])->name('verificacion.verificar');
+    Route::post('/verificacion/ingreso', [VerificacionController::class, 'ingreso'])->name('verificacion.ingreso');
+});
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/control-ingreso', [
-        EstudianteController::class,
-        'vistaIngreso'
-    ])->name('ingreso.index');
-
-    Route::post('/control-ingreso/verificar', [
-        EstudianteController::class,
-        'verificarIngreso'
-    ])->name('ingreso.verificar');
+    Route::get('/control-ingreso', [VerificacionController::class, 'index'])->name('ingreso.index');
+    Route::post('/control-ingreso/verificar', [VerificacionController::class, 'verificar'])->name('ingreso.verificar');
+    Route::post('/control-ingreso/ingreso', [VerificacionController::class, 'ingreso'])->name('ingreso.ingreso');
 });
 
 // --- Transparencia de ingreso (RQ8) ---

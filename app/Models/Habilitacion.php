@@ -8,10 +8,17 @@ use Illuminate\Support\Facades\DB;
 class Habilitacion extends Model
 {
     protected $table = 'habilitacion';
+    protected $primaryKey = 'id_habilitacion';
+    public $timestamps = true;
 
     protected $fillable = [
         'estudiante_id', 'examen_id', 'estado', 'motivo_inhabilitacion_id', 'observacion',
     ];
+
+    public function getIdAttribute()
+    {
+        return $this->attributes['id_habilitacion'] ?? $this->attributes['id'] ?? null;
+    }
 
     public function estudiante()
     {
