@@ -12,6 +12,9 @@ php artisan migrate:fresh --seed
 php artisan serve             # http://127.0.0.1:8000
 ```
 
+Configura también `MAIL_*` en el `.env` (con `MAIL_MAILER=log` los correos se escriben en `storage/logs/laravel.log`).
+Despliegue en el laboratorio: `./deploy.sh` (ver `docs/Sprint2_implementacion.md`).
+
 No hace falta `npm`: los estilos están en `public/css/sciem.css` y el JS de los modales en `public/js/sciem.js`.
 
 Usuarios de prueba (contraseña `password123`):

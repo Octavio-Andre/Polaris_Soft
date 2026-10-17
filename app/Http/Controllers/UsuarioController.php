@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\CredencialesUsuario;
 use App\Models\User;
 use App\Support\Grados;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
@@ -43,10 +46,13 @@ class UsuarioController extends Controller
     {
         $data = $this->validar($request);
         $data['name'] = trim($data['nombre'].' '.$data['apellido']);
+        $contrasena = $data['password']; // en claro solo aquí: el modelo la guarda encriptada
 
-        User::create($data);
+        $usuario = User::create($data);
 
-        return redirect()->route('usuarios.index')->with('status', 'Usuario creado correctamente.');
+        return redirect()->route('usuarios.index')->with(
+            $this->enviarCredenciales($usuario, $contrasena, false)
+        );
     }
 
     public function update(Request $request, User $usuario)
@@ -64,7 +70,16 @@ class UsuarioController extends Controller
             ]);
         }
 
+        $contrasenaNueva = $data['password'] ?? null;
+
         $usuario->update($data);
+
+        // Solo se envía correo si el administrador escribió una contraseña nueva.
+        if ($contrasenaNueva) {
+            return redirect()->route('usuarios.index')->with(
+                $this->enviarCredenciales($usuario, $contrasenaNueva, true)
+            );
+        }
 
         return redirect()->route('usuarios.index')->with('status', 'Usuario actualizado correctamente.');
     }
@@ -79,6 +94,32 @@ class UsuarioController extends Controller
         $usuario->update(['estado' => $usuario->estado === 'activo' ? 'inactivo' : 'activo']);
 
         return back()->with('status', $usuario->estado === 'activo' ? 'Usuario reactivado.' : 'Usuario desactivado.');
+    }
+
+    /**
+     * Envía al usuario un correo con su contraseña. Si el correo falla (SMTP mal configurado, sin internet…)
+     * la cuenta igual queda guardada y se avisa al administrador, para que no se pierda el trabajo.
+     *
+     * @return array<string,string> mensaje flash: ['status' => ...] o ['error' => ...]
+     */
+    private function enviarCredenciales(User $usuario, string $contrasena, bool $esCambio): array
+    {
+        $base = $esCambio ? 'Contraseña actualizada.' : 'Usuario creado correctamente.';
+
+        // Usuario inactivo: no se le avisa por correo todavía.
+        if ($usuario->estado !== 'activo') {
+            return ['status' => $base.' Como la cuenta está inactiva, no se envió correo.'];
+        }
+
+        try {
+            Mail::to($usuario->email)->send(new CredencialesUsuario($usuario, $contrasena, $esCambio));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar el correo de credenciales a '.$usuario->email.': '.$e->getMessage());
+
+            return ['error' => $base.' Pero no se pudo enviar el correo a '.$usuario->email.' (revisa la configuración MAIL_* del .env).'];
+        }
+
+        return ['status' => $base.' Se enviaron las credenciales a '.$usuario->email.'.'];
     }
 
     private function validar(Request $request, ?User $actual = null): array

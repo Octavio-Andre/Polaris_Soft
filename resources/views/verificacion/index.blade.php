@@ -197,7 +197,7 @@
         </div>
         <div>
             <h1>Verificación de identidad</h1>
-            <p>Ingresa o escanea el código universitario del estudiante para validar su ingreso.</p>
+            <p>Ingresa o escanea el código universitario, la cédula o el código QR del estudiante para validar su ingreso.</p>
         </div>
     </div>
 
@@ -225,6 +225,7 @@
                 <select id="metodo_verificacion" aria-label="Método de verificación">
                     <option value="CODIGO_UNIV">Código universitario</option>
                     <option value="CI">Cédula de identidad</option>
+                    <option value="QR">Código QR</option>
                 </select>
             </div>
 
@@ -234,7 +235,12 @@
                     <input type="text" id="codigo" placeholder="Escanea o digita el código…" disabled autocomplete="off" autofocus style="flex:1;">
                     <button type="submit" class="btn" id="btn-verificar" disabled>Verificar</button>
                 </div>
-                <small class="sub" style="display:block;margin-top:8px">Presiona Enter o Verificar para mostrar los datos del estudiante.</small>
+                <small class="sub" style="display:block;margin-top:8px">Presiona Enter o Verificar para mostrar los datos del estudiante. Un lector USB de QR también funciona: escribe en este campo y envía Enter.</small>
+            </div>
+
+            <div class="field" id="bloque-camara" style="display:none">
+                <button type="button" class="btn ghost" id="btn-camara">Activar cámara para escanear QR</button>
+                <div id="lector-qr" style="max-width:360px;margin-top:12px"></div>
             </div>
         </form>
     </section>
@@ -248,6 +254,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
 (function () {
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -263,21 +270,78 @@
 
     let ultimaVerificacion = null;
 
+    const bloqueCamara = document.getElementById('bloque-camara');
+    const btnCamara    = document.getElementById('btn-camara');
+    let lector = null;
+
+    // ---- Sonidos de éxito / error (RQ7): beeps generados con Web Audio, sin archivos de audio ----
+    let audioCtx = null;
+    function beep(ok) {
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const notas = ok ? [880, 1320] : [220, 180];
+            notas.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = ok ? 'sine' : 'square';
+                osc.frequency.value = freq;
+                gain.gain.value = 0.15;
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                const t = audioCtx.currentTime + i * 0.14;
+                osc.start(t); osc.stop(t + 0.12);
+            });
+        } catch (e) { /* sin audio: no pasa nada */ }
+    }
+
+    function detenerCamara() {
+        if (lector) { lector.stop().catch(() => {}).finally(() => { lector = null; }); }
+        btnCamara.textContent = 'Activar cámara para escanear QR';
+    }
+
     function actualizarMetodoVerificacion() {
         const metodo = metodoVerificacion.value;
         const esCodigo = metodo === 'CODIGO_UNIV';
-        labelCodigo.textContent = esCodigo ? 'Código universitario' : 'Cédula de identidad';
-        inputCodigo.placeholder = esCodigo ? 'Escanea o digita el código…' : 'Ingresa la cédula…';
+        const esQr = metodo === 'QR';
+        labelCodigo.textContent = esCodigo ? 'Código universitario' : (esQr ? 'Código QR' : 'Cédula de identidad');
+        inputCodigo.placeholder = esCodigo ? 'Escanea o digita el código…' : (esQr ? 'Escanea el QR con lector o cámara…' : 'Ingresa la cédula…');
         inputCodigo.value = '';
-        inputCodigo.setAttribute('inputmode', 'numeric');
+        inputCodigo.setAttribute('inputmode', esQr ? 'text' : 'numeric');
         inputCodigo.setAttribute('autocomplete', 'off');
-        inputCodigo.setAttribute('maxlength', esCodigo ? '9' : '10');
+        inputCodigo.setAttribute('maxlength', esCodigo ? '9' : (esQr ? '1000' : '10'));
+        bloqueCamara.style.display = esQr ? 'block' : 'none';
+        if (!esQr) detenerCamara();
     }
 
     actualizarMetodoVerificacion();
     metodoVerificacion.addEventListener('change', actualizarMetodoVerificacion);
     inputCodigo.addEventListener('input', () => {
-        inputCodigo.value = inputCodigo.value.replace(/\D/g, '');
+        if (metodoVerificacion.value !== 'QR') {
+            inputCodigo.value = inputCodigo.value.replace(/\D/g, '');
+        }
+    });
+
+    // Cámara del celular / tablet / webcam: al leer un QR lo verifica solo, sin presionar nada.
+    btnCamara.addEventListener('click', async () => {
+        if (lector) { detenerCamara(); return; }
+        if (!actualizarContexto()) { mostrar(banner('warn', 'Selecciona un examen antes de escanear.')); return; }
+        if (typeof Html5Qrcode === 'undefined') { mostrar(banner('danger', 'No se pudo cargar el lector de QR (¿sin internet?). Usa un lector USB o digita el código.')); return; }
+
+        lector = new Html5Qrcode('lector-qr');
+        btnCamara.textContent = 'Detener cámara';
+        try {
+            let leyendo = false; // evita verificar el mismo QR decenas de veces mientras sigue frente a la cámara
+            await lector.start({ facingMode: 'environment' }, { fps: 10, qrbox: 240 }, (texto) => {
+                if (leyendo) return;
+                leyendo = true;
+                setTimeout(() => { leyendo = false; }, 2500);
+                inputCodigo.value = texto;
+                formVerificacion.requestSubmit();
+            });
+        } catch (e) {
+            mostrar(banner('danger', 'No se pudo abrir la cámara. Revisa el permiso del navegador (en celular se necesita HTTPS).'));
+            lector = null;
+            btnCamara.textContent = 'Activar cámara para escanear QR';
+        }
     });
 
     function actualizarContexto() {
@@ -319,12 +383,6 @@
                     <div class="field">
                         <label>Código</label>
                         <div class="value">${e.codigo}</div>
-                    </div>
-                    <div class="field">
-                        <label>Foto</label>
-                        <div class="value">
-                            <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:#e0e7ff;color:#1e3a8a;font-weight:700;">${(e.nombres || 'E').charAt(0).toUpperCase()}${(e.apellidos || 'S').charAt(0).toUpperCase()}</span>
-                        </div>
                     </div>
                     <div class="field">
                         <label>Nombre completo</label>
@@ -380,6 +438,8 @@
 
         if (metodo === 'CODIGO_UNIV') {
             payload.codigo_universitario = valor;
+        } else if (metodo === 'QR') {
+            payload.token_qr = valor;
         } else {
             payload.documento_identidad = valor;
             payload.ci_complemento = '';
@@ -394,6 +454,7 @@
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
+            beep(data.tipo === 'habilitado');
 
             if (data.tipo === 'codigo_no_registrado') {
                 mostrar(estadoResultado('NO REGISTRADO') + banner('danger', `⚠ ${data.mensaje}`));
@@ -451,7 +512,8 @@
                 body: JSON.stringify(ultimaVerificacion)
             });
             const data = await res.json();
-            mostrar(res.ok ? banner('ok', `✓ ${data.mensaje}`) : banner('warn', data.mensaje));
+            beep(res.ok);
+            mostrar(res.ok ? banner('ok', `✓ ${data.mensaje}`) : banner('warn', data.mensaje || 'No se pudo registrar el ingreso.'));
         } catch (error) {
             mostrar(banner('danger', 'Error de conexión al registrar el ingreso.'));
         } finally {

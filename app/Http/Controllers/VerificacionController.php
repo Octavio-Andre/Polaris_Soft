@@ -5,10 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Estudiante;
 use App\Models\Examen;
 use App\Models\Habilitacion;
+use App\Models\IntentoIngreso;
 use App\Models\TransparenciaIngreso;
+use App\Models\Verificacion;
+use App\Services\QrEstudianteService;
 use App\Services\TransparenciaIngresoService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class VerificacionController extends Controller
@@ -23,20 +28,51 @@ class VerificacionController extends Controller
         return view('verificacion.index', compact('examenes'));
     }
 
-    public function verificar(Request $request): JsonResponse
+    /** Atajos de las rutas del plan del sprint: POST /verificar/codigo, /verificar/ci y /verificar/qr. */
+    public function verificarCodigo(Request $request, QrEstudianteService $qr): JsonResponse
+    {
+        $request->merge(['metodo_verificacion' => 'CODIGO_UNIV']);
+
+        return $this->verificar($request, $qr);
+    }
+
+    public function verificarCi(Request $request, QrEstudianteService $qr): JsonResponse
+    {
+        $request->merge(['metodo_verificacion' => 'CI']);
+
+        return $this->verificar($request, $qr);
+    }
+
+    public function verificarQr(Request $request, QrEstudianteService $qr): JsonResponse
+    {
+        $request->merge(['metodo_verificacion' => 'QR']);
+
+        return $this->verificar($request, $qr);
+    }
+
+    /** Equivalencia entre el método de la pantalla y el tipo guardado en `verificacion` / `intento_ingreso`. */
+    private const TIPO_BITACORA = [
+        'CODIGO_UNIV' => 'CODIGO_UNIVERSITARIO',
+        'CI' => 'DOCUMENTO_IDENTIDAD',
+        'QR' => 'CODIGO_QR',
+    ];
+
+    public function verificar(Request $request, QrEstudianteService $qr): JsonResponse
     {
         $metodo = strtoupper(trim((string) ($request->input('metodo_verificacion') ?: 'CODIGO_UNIV')));
 
         $reglas = [
             'id_examen' => ['required', 'integer', 'exists:examenes,id'],
-            'metodo_verificacion' => ['required', Rule::in(['CODIGO_UNIV', 'CI'])],
+            'metodo_verificacion' => ['required', Rule::in(['CODIGO_UNIV', 'CI', 'QR'])],
         ];
 
         if ($metodo === 'CODIGO_UNIV') {
             $reglas['codigo_universitario'] = ['required', 'digits:9'];
-        } else {
+        } elseif ($metodo === 'CI') {
             $reglas['documento_identidad'] = ['required', 'digits_between:5,10'];
             $reglas['ci_complemento'] = ['nullable', 'max:2'];
+        } else {
+            $reglas['token_qr'] = ['required', 'string', 'max:1000'];
         }
 
         $data = $request->validate($reglas, [
@@ -47,25 +83,22 @@ class VerificacionController extends Controller
             'codigo_universitario.digits' => 'El código universitario debe tener 9 dígitos.',
             'documento_identidad.required' => 'Ingresa la cédula de identidad.',
             'documento_identidad.digits_between' => 'La cédula debe tener entre 5 y 10 dígitos.',
+            'token_qr.required' => 'No se recibió el contenido del código QR.',
         ]);
 
         $examen = Examen::findOrFail($data['id_examen']);
+        $tipoBitacora = self::TIPO_BITACORA[$metodo];
 
+        // ---- 1) Identificar al estudiante según el método ----
         if ($metodo === 'CODIGO_UNIV') {
-            $codigo = trim((string) $data['codigo_universitario']);
-            $estudiante = Estudiante::where('codigo_universitario', $codigo)->first();
-
-            if (! $estudiante) {
-                return response()->json([
-                    'tipo' => 'codigo_no_registrado',
-                    'mensaje' => 'No existe un estudiante registrado con ese código universitario.',
-                ], 404);
-            }
-        } else {
-            $documento = trim((string) $data['documento_identidad']);
+            $dato = trim((string) $data['codigo_universitario']);
+            $estudiante = Estudiante::where('codigo_universitario', $dato)->first();
+            $msgNoExiste = 'No existe un estudiante registrado con ese código universitario.';
+        } elseif ($metodo === 'CI') {
+            $dato = trim((string) $data['documento_identidad']);
             $complemento = strtoupper(trim((string) ($data['ci_complemento'] ?? '')));
 
-            $query = Estudiante::where('documento_identidad', $documento);
+            $query = Estudiante::where('documento_identidad', $dato);
             if ($complemento === '') {
                 $query->where(function ($q) {
                     $q->whereNull('ci_complemento')->orWhere('ci_complemento', '');
@@ -75,65 +108,78 @@ class VerificacionController extends Controller
             }
 
             $estudiante = $query->first();
+            $msgNoExiste = 'No existe un estudiante registrado con esa cédula de identidad.';
+        } else {
+            $dato = Str::limit(trim((string) $data['token_qr']), 60, '…');
+            $estudiante = $qr->validarToken($data['token_qr']);
+            $msgNoExiste = 'Código QR no válido o alterado.';
+        }
 
-            if (! $estudiante) {
-                return response()->json([
-                    'tipo' => 'codigo_no_registrado',
-                    'mensaje' => 'No existe un estudiante registrado con esa cédula de identidad.',
-                ], 404);
+        // Cierra la verificación: la deja en la bitácora (y como intento si fue negativa) y arma la respuesta JSON.
+        $cerrar = function (string $resultado, string $tipoRespuesta, string $mensaje, int $http, ?Estudiante $est, array $extra = [], bool $esIntento = true) use ($request, $examen, $tipoBitacora, $dato): JsonResponse {
+            $comunes = [
+                'estudiante_id' => $est?->getKey(),
+                'examen_id' => $examen->id,
+                'controlador_id' => $request->user()->id,
+                'tipo' => $tipoBitacora,
+                'dato_verificado' => $dato,
+                'fecha_hora' => now(),
+            ];
+
+            try {
+                Verificacion::create($comunes + ['resultado' => $resultado]);
+                if ($esIntento) {
+                    IntentoIngreso::create($comunes + ['motivo' => Str::limit($mensaje, 255, '')]);
+                }
+            } catch (\Throwable $e) {
+                // La bitácora nunca debe impedir que el controlador vea el resultado en pantalla.
+                report($e);
             }
+
+            return response()->json(['tipo' => $tipoRespuesta, 'mensaje' => $mensaje] + $extra, $http);
+        };
+
+        if (! $estudiante) {
+            return $cerrar($metodo === 'QR' ? 'QR_INVALIDO' : 'NO_REGISTRADO', 'codigo_no_registrado', $msgNoExiste, 404, null);
         }
 
+        $resumen = ['estudiante' => $this->resumenEstudiante($estudiante)];
+
+        // ---- 2) Estado del estudiante ----
         if (strtoupper((string) $estudiante->estado) !== 'ACTIVO') {
-            return response()->json([
-                'tipo' => 'inactivo',
-                'mensaje' => 'El estudiante no se encuentra activo para rendir el examen.',
-                'estudiante' => $this->resumenEstudiante($estudiante),
-            ], 422);
+            return $cerrar('INACTIVO', 'inactivo', 'El estudiante no se encuentra activo para rendir el examen.', 422, $estudiante, $resumen);
         }
 
+        // ---- 3) ¿Ya ingresó a este examen? (RQ11) ----
         $ingresoPrevio = TransparenciaIngreso::where('estudiante_id', $estudiante->id_estudiante)
             ->where('examen_id', $examen->id)
             ->latest('fecha_hora_ingreso')
             ->first();
 
         if ($ingresoPrevio) {
-            return response()->json([
-                'tipo' => 'ya_ingreso',
-                'mensaje' => 'El estudiante ya registró ingreso para este examen.',
-                'fecha_hora' => $ingresoPrevio->fecha_hora_ingreso,
-                'estudiante' => $this->resumenEstudiante($estudiante),
-            ], 409);
+            return $cerrar('YA_INGRESO', 'ya_ingreso', 'El estudiante ya registró ingreso para este examen.', 409, $estudiante,
+                ['fecha_hora' => $ingresoPrevio->fecha_hora_ingreso] + $resumen, esIntento: false);
         }
 
-        $habilitacion = Habilitacion::where('estudiante_id', $estudiante->id_estudiante)
+        // ---- 4) Habilitación para este examen (RQ3 / RQ4 / RQ9) ----
+        $habilitacion = Habilitacion::with('motivo')
+            ->where('estudiante_id', $estudiante->id_estudiante)
             ->where('examen_id', $examen->id)
             ->first();
 
         if (! $habilitacion) {
-            return response()->json([
-                'tipo' => 'no_habilitado',
-                'mensaje' => 'El estudiante no tiene habilitación registrada para este examen.',
-                'estudiante' => $this->resumenEstudiante($estudiante),
-            ], 422);
+            return $cerrar('NO_HABILITADO', 'no_habilitado', 'El estudiante no tiene habilitación registrada para este examen.', 422, $estudiante, $resumen);
         }
 
         if ($habilitacion->estado !== 'habilitado') {
-            return response()->json([
-                'tipo' => 'no_habilitado',
-                'mensaje' => $habilitacion->motivo?->descripcion ?? 'El estudiante está inhabilitado para este examen.',
-                'motivo_inhabilitacion' => $habilitacion->motivo?->descripcion,
-                'estudiante' => $this->resumenEstudiante($estudiante),
-            ], 422);
+            $motivo = $habilitacion->motivo?->descripcion;
+
+            return $cerrar('NO_HABILITADO', 'no_habilitado', $motivo ?? 'El estudiante está inhabilitado para este examen.', 422, $estudiante,
+                ['motivo_inhabilitacion' => $motivo] + $resumen);
         }
 
-        return response()->json([
-            'tipo' => 'habilitado',
-            'mensaje' => 'Estudiante habilitado para este examen.',
-            'estudiante' => $this->resumenEstudiante($estudiante),
-            'codigo' => $estudiante->codigo_universitario,
-            'id_habilitacion' => $habilitacion->id,
-        ], 200);
+        return $cerrar('HABILITADO', 'habilitado', 'Estudiante habilitado para este examen.', 200, $estudiante,
+            ['codigo' => $estudiante->codigo_universitario, 'id_habilitacion' => $habilitacion->id] + $resumen, esIntento: false);
     }
 
     public function ingreso(Request $request, TransparenciaIngresoService $servicio): JsonResponse
@@ -184,13 +230,20 @@ class VerificacionController extends Controller
             ], 409);
         }
 
-        $registro = $servicio->registrar(
-            $estudiante,
-            $examen,
-            $request->user(),
-            $data['metodo'] ?? 'CODIGO_UNIV',
-            $request
-        );
+        try {
+            $registro = $servicio->registrar(
+                $estudiante,
+                $examen,
+                $request->user(),
+                $data['metodo'] ?? 'CODIGO_UNIV',
+                $request
+            );
+        } catch (QueryException $e) {
+            // Índice único (estudiante, examen): otro clic llegó primero.
+            return response()->json([
+                'mensaje' => 'El estudiante ya registró ingreso para este examen.',
+            ], 409);
+        }
 
         return response()->json([
             'mensaje' => 'Ingreso registrado correctamente.',

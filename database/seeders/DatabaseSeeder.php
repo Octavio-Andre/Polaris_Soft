@@ -67,7 +67,7 @@ class DatabaseSeeder extends Seeder
             ['Álgebra Lineal', 'MAT-102', 'Ingeniería Industrial'],
             ['Base de Datos I', 'INF-240', 'Ingeniería de Sistemas'],
         ])->map(function ($m, $i) use ($docentes) {
-            $materia = Materia::updateOrCreate(['sigla' => $m[1]], ['nombre' => $m[0], 'carrera' => $m[2]]);
+            $materia = Materia::updateOrCreate(['sigla' => $m[1]], ['nombre' => $m[0], 'carrera' => $m[2], 'facultad' => Catalogo::facultadDeCarrera($m[2])]);
             Grupo::firstOrCreate(
                 ['materia_id' => $materia->id, 'nombre' => 'Grupo A'],
                 ['docente_id' => $docentes[$i % $docentes->count()]->id]

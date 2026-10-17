@@ -2,8 +2,9 @@
 @section('title', 'Estudiantes habilitados')
 
 @section('content')
+    @php $rutaExamenes = auth()->user()->rol === 'docente' ? route('docente.examenes') : route('examenes.index'); @endphp
     <nav class="crumb" aria-label="Ruta">
-        <a href="{{ url('/dashboard') }}">Inicio</a> › <a href="{{ route('examenes.index') }}">Exámenes</a> › <b>Habilitados</b>
+        <a href="{{ url('/dashboard') }}">Inicio</a> › <a href="{{ $rutaExamenes }}">Exámenes</a> › <b>Habilitados</b>
     </nav>
 
     <div class="head">
@@ -11,7 +12,7 @@
             <h1>Estudiantes habilitados</h1>
             <p>{{ $examen->asignatura->nombre ?? $examen->materia->nombre ?? '—' }}{{ $examen->carrera ? ' · '.$examen->carrera : '' }} · {{ $examen->fecha->format('d/m/Y') }} {{ $examen->hora }} · {{ $examen->ambiente }}</p>
         </div>
-        <a class="btn ghost" href="{{ route('examenes.index') }}">‹ Volver a exámenes</a>
+        <a class="btn ghost" href="{{ $rutaExamenes }}">‹ Volver a exámenes</a>
     </div>
 
     @if (session('status')) <div class="flash" role="status">{{ session('status') }}</div> @endif
@@ -101,6 +102,12 @@
         @csrf
         <input type="hidden" name="estudiante_ids[]" id="input-habilitar-uno">
     </form>
+    <form method="POST" action="{{ route('habilitaciones.enviar_qr', $examen) }}" style="margin-top:12px;text-align:right"
+          onsubmit="return confirm('¿Enviar por correo su código QR a todos los estudiantes habilitados de este examen?')">
+        @csrf
+        <button type="submit" class="btn ghost"><svg class="i sm"><use href="#i-mail"/></svg> Enviar QR por correo a los habilitados</button>
+    </form>
+
     <form id="form-quitar" method="POST" style="display:none">
         @csrf @method('DELETE')
     </form>
