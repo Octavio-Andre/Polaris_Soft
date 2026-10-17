@@ -7,6 +7,7 @@ use App\Models\Docente;
 use App\Models\Estudiante;
 use App\Models\Grupo;
 use App\Models\Materia;
+use App\Services\InscripcionAsignaturaService;
 use Illuminate\Http\Request;
 
 class AsignacionController extends Controller
@@ -32,7 +33,7 @@ class AsignacionController extends Controller
      * Guarda la asignación de materia + grupo + docente para el estudiante.
      * Espera del formulario: materia_id, grupo_id, docente_id (opcional).
      */
-    public function store(Request $request, Estudiante $estudiante)
+    public function store(Request $request, Estudiante $estudiante, InscripcionAsignaturaService $inscripciones)
     {
         $data = $request->validate([
             'materia_id' => ['required', 'exists:materias,id'],
@@ -57,14 +58,18 @@ class AsignacionController extends Controller
         }
 
         Asignacion::create($data);
+        // La materia también queda como inscripción: así aparece su carrera y asignatura al registrar exámenes.
+        $inscripciones->inscribir((int) $estudiante->getKey(), (int) $data['materia_id']);
 
         return back()->with('success', 'Asignación registrada correctamente.');
     }
 
-    public function destroy(Asignacion $asignacion)
+    public function destroy(Asignacion $asignacion, InscripcionAsignaturaService $inscripciones)
     {
         $estudianteId = $asignacion->estudiante_id;
+        $materia = $asignacion->materia;
         $asignacion->delete();
+        $inscripciones->desinscribir((int) $estudianteId, $materia);
 
         return redirect()
             ->route('asignaciones.create', $estudianteId)

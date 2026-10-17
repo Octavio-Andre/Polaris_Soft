@@ -36,3 +36,17 @@
 - RQ3: la "nota de excepción" al asociar a mano un estudiante que no es de la materia (HU-006) no se implementó.
 - El docente ve **todos** los exámenes: no hay vínculo entre la cuenta de usuario y la ficha de `docentes`, por eso no se filtra por "sus" materias.
 - RQ28: el despliegue real en WEBTIS depende de acceso al servidor; aquí queda el script y la guía.
+
+## Correcciones del informe de QA (HU001, HU003, HU007, HU008)
+
+| Bug | Qué pasaba | Corrección |
+|---|---|---|
+| 1-1 Asterisco alejado | `.field label` repartía el espacio entre texto y `*` | `public/css/sciem.css`: el `*` queda pegado a la palabra |
+| 1-2 Nombres "mIxTeD cAsE" | Se guardaba tal cual se escribía | `Texto::nombrePropio()` (Guevara, María de la Cruz) al registrar, editar e importar CSV de estudiantes; también docentes y usuarios |
+| 2-1 Carrera vacía en Registrar examen | Las carreras salen de `estudiante_asignatura`, que nadie llenaba | `InscripcionAsignaturaService` inscribe al asignar materia (y al importar CSV), migración que rellena lo ya existente, y el seeder lo llama. Si no hay carreras, el formulario lo explica |
+| 7-1 Modal Inhabilitar pierde datos al hacer clic afuera | El modal no registraba sus valores iniciales y el sistema creía que no había cambios | Se registran al abrirlo; además Esc pide confirmación si hay datos escritos |
+| 7-2 Error 500 `id_habilitacion` | Bases creadas con migraciones tenían la columna `id` | Migración `2026_10_17_000001` renombra `id` → `id_habilitacion` |
+| 8-1 Resultado de verificación apilado | — | Ya estaba como tarjeta con rejilla de 2 columnas |
+| 8-2 Foto sin sentido en Verificación | — | Ya estaba eliminada |
+
+Después de actualizar: `php artisan migrate`.

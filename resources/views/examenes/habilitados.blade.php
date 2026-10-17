@@ -169,7 +169,10 @@
         document.getElementById('mot-select').value = '';
         document.getElementById('mot-obs').value = '';
         actualizarObligatoriedad();
-        document.getElementById('modal-inhabilitar').showModal();
+        const modal = document.getElementById('modal-inhabilitar');
+        modal.showModal();
+        // Sin esta "foto" inicial el sistema no sabe si hay datos escritos y cerraba el modal al hacer clic afuera.
+        setTimeout(() => { modal._valoresIniciales = valoresFormulario(document.getElementById('form-inhabilitar')); }, 0);
     }
 
     // Si la causa elegida es "Otro", la observación pasa a ser obligatoria.
