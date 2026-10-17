@@ -45,6 +45,10 @@
                 <a href="{{ route('usuarios.index') }}" @class(['active' => request()->routeIs('usuarios.*')])>
                     <svg class="i"><use href="#i-users"/></svg> Usuarios</a>
             @endif
+            @if ($es('docente'))
+                <a href="{{ route('docente.examenes') }}" @class(['active' => request()->routeIs('docente.examenes', 'habilitaciones.*')])>
+                    <svg class="i"><use href="#i-exams"/></svg> Habilitar estudiantes</a>
+            @endif
             @if ($es('administrador', 'control'))
                 <a href="{{ route('verificacion.index') }}" @class(['active' => request()->routeIs('verificacion.*')])>
                     <svg class="i"><use href="#i-check"/></svg> Verificación</a>

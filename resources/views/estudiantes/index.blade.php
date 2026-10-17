@@ -90,6 +90,8 @@
                                 <button type="button" class="icon-btn" title="Editar" aria-label="Editar"
                                         data-edit="{{ json_encode($payload) }}" data-url="{{ $url }}" data-id="{{ $e->getKey() }}">
                                     <svg class="i"><use href="#i-edit"/></svg></button>
+                                <a class="icon-btn" href="{{ route('estudiantes.qr', $e) }}" title="Ver código QR" aria-label="Ver código QR">
+                                    <svg class="i"><use href="#i-id"/></svg></a>
                                 <a class="icon-btn" href="{{ route('asignaciones.create', $e) }}" title="Asignar materia, grupo y docente" aria-label="Asignar materia, grupo y docente">
                                     <svg class="i"><use href="#i-exams"/></svg></a>
                                 <form method="POST" action="{{ $url }}">

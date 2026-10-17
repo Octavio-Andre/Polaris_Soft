@@ -23,8 +23,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // RQ3: habilitación de estudiantes para un examen (carga individual y masiva).
-// Protegidas: hace falta un token de API (Authorization: Bearer ...) de un usuario administrador.
-Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
+// Protegidas: hace falta un token de API (Authorization: Bearer ...) de un administrador o docente.
+Route::middleware(['auth:sanctum', 'role:administrador,docente'])->group(function () {
     Route::post('/habilitaciones', [HabilitacionApiController::class, 'store']);
     Route::post('/habilitaciones/masiva', [HabilitacionApiController::class, 'masiva']);
     Route::get('/habilitaciones/examen/{id}', [HabilitacionApiController::class, 'porExamen']);

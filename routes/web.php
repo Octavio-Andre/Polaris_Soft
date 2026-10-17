@@ -5,7 +5,9 @@ use App\Http\Controllers\AmbienteController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocenteController;
+use App\Http\Controllers\DocenteExamenController;
 use App\Http\Controllers\EstudianteController;
+use App\Http\Controllers\EstudianteQrController;
 use App\Http\Controllers\ExamenController;
 use App\Http\Controllers\GrupoController;
 use App\Http\Controllers\HabilitacionController;
@@ -43,6 +45,9 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::get('/estudiantes-importar', [EstudianteController::class, 'importarForm'])->name('estudiantes.importar.form');
     Route::post('/estudiantes-importar', [EstudianteController::class, 'importar'])->name('estudiantes.importar');
 
+    // Código QR del estudiante (RQ7)
+    Route::get('/estudiantes/{estudiante}/qr', [EstudianteQrController::class, 'ver'])->name('estudiantes.qr');
+
     // Materias, docentes y grupos (RQ27)
     Route::resource('materias', MateriaController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('docentes', DocenteController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -58,21 +63,29 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
         ->parameters(['examenes' => 'examen'])
         ->except(['create', 'show', 'edit']);
 
-    // Estudiantes habilitados / inhabilitados por examen (RQ3 + RQ4)
-    Route::get('/examenes/{examen}/habilitados', [HabilitacionController::class, 'index'])->name('habilitaciones.index');
-    Route::post('/examenes/{examen}/habilitados', [HabilitacionController::class, 'habilitarMasiva'])->name('habilitaciones.masiva');
-    Route::post('/examenes/{examen}/habilitados/{estudiante}/inhabilitar', [HabilitacionController::class, 'inhabilitar'])->name('habilitaciones.inhabilitar');
-    Route::delete('/examenes/{examen}/habilitados/{estudiante}', [HabilitacionController::class, 'quitar'])->name('habilitaciones.quitar');
-
     Route::resource('usuarios', UsuarioController::class)
         ->parameters(['usuarios' => 'usuario'])
         ->only(['index', 'store', 'update']);
     Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
 });
 
+// --- Habilitar / inhabilitar estudiantes por examen (RQ3 + RQ4): administrador y docente ---
+Route::middleware(['auth', 'role:administrador,docente'])->group(function () {
+    Route::get('/examenes/{examen}/habilitados', [HabilitacionController::class, 'index'])->name('habilitaciones.index');
+    Route::post('/examenes/{examen}/habilitados', [HabilitacionController::class, 'habilitarMasiva'])->name('habilitaciones.masiva');
+    Route::post('/examenes/{examen}/habilitados/{estudiante}/inhabilitar', [HabilitacionController::class, 'inhabilitar'])->name('habilitaciones.inhabilitar');
+    Route::delete('/examenes/{examen}/habilitados/{estudiante}', [HabilitacionController::class, 'quitar'])->name('habilitaciones.quitar');
+    // Enviar por correo el QR a los habilitados de un examen (RQ7)
+    Route::post('/examenes/{examen}/habilitados-enviar-qr', [EstudianteQrController::class, 'enviarHabilitados'])->name('habilitaciones.enviar_qr');
+});
+
+// Página del QR que abre el estudiante desde el enlace firmado de su correo (sin iniciar sesión).
+Route::get('/qr/{estudiante}', [EstudianteQrController::class, 'publico'])->middleware('signed')->name('qr.publico');
+
 // --- Docente ---
 Route::middleware(['auth', 'role:docente'])->group(function () {
     Route::get('/docente/dashboard', fn () => view('docente.dashboard'));
+    Route::get('/docente/examenes', [DocenteExamenController::class, 'index'])->name('docente.examenes');
 });
 
 // --- Personal de control ---
@@ -85,9 +98,15 @@ Route::middleware(['auth', 'role:administrador,control'])->group(function () {
     Route::get('/verificacion', [VerificacionController::class, 'index'])->name('verificacion.index');
     Route::post('/verificacion/verificar', [VerificacionController::class, 'verificar'])->name('verificacion.verificar');
     Route::post('/verificacion/ingreso', [VerificacionController::class, 'ingreso'])->name('verificacion.ingreso');
+
+    // Rutas cortas del plan del Sprint 2 (HU-008/009/010).
+    Route::post('/verificar/codigo', [VerificacionController::class, 'verificarCodigo'])->name('verificar.codigo');
+    Route::post('/verificar/ci', [VerificacionController::class, 'verificarCi'])->name('verificar.ci');
+    Route::post('/verificar/qr', [VerificacionController::class, 'verificarQr'])->name('verificar.qr');
 });
 
-Route::middleware(['auth'])->group(function () {
+// Alias antiguo de la verificación: ahora también exige rol (antes cualquier usuario logueado podía usarlo).
+Route::middleware(['auth', 'role:administrador,control'])->group(function () {
     Route::get('/control-ingreso', [VerificacionController::class, 'index'])->name('ingreso.index');
     Route::post('/control-ingreso/verificar', [VerificacionController::class, 'verificar'])->name('ingreso.verificar');
     Route::post('/control-ingreso/ingreso', [VerificacionController::class, 'ingreso'])->name('ingreso.ingreso');
