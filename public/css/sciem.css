@@ -179,9 +179,9 @@ dialog::backdrop{background:rgba(7,26,64,.55);backdrop-filter:blur(2px)}
 .m-body{padding:18px 22px;display:grid;gap:14px;max-height:70vh;overflow:auto}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .row-codigo{display:grid;grid-template-columns:1fr 90px;gap:14px}
-.field label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
-.field label i{font-style:normal;font-weight:400;color:var(--muted)}
-.field label .req{color:var(--danger)}
+.field label{display:flex;justify-content:flex-start;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
+.field label i{font-style:normal;font-weight:400;color:var(--muted);margin-left:auto;padding-left:10px}
+.field label .req{color:var(--danger);margin-left:2px}
 .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid transparent;border-radius:9px;background:var(--soft)}
 .field textarea{resize:vertical;min-height:64px}
 .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--blue-600);background:#fff}
