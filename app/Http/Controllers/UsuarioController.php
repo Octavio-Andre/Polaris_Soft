@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\CredencialesUsuario;
 use App\Models\User;
 use App\Support\Grados;
+use App\Support\Texto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -124,6 +125,11 @@ class UsuarioController extends Controller
 
     private function validar(Request $request, ?User $actual = null): array
     {
+        $request->merge([
+            'nombre' => Texto::nombrePropio($request->input('nombre')),
+            'apellido' => Texto::nombrePropio($request->input('apellido')),
+        ]);
+
         return $request->validate([
             'nombre' => ['required', 'string', 'max:80', 'regex:'.self::REGEX_ALFABETICO],
             'apellido' => ['required', 'string', 'max:80', 'regex:'.self::REGEX_ALFABETICO],

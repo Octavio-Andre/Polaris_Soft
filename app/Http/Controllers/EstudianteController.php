@@ -6,7 +6,9 @@ use App\Models\Asignacion;
 use App\Models\Estudiante;
 use App\Models\Grupo;
 use App\Models\Materia;
+use App\Services\InscripcionAsignaturaService;
 use App\Support\Catalogo;
+use App\Support\Texto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -79,6 +81,12 @@ class EstudianteController extends Controller
     private function validar(Request $request, ?Estudiante $actual = null): array
     {
         $id = $actual?->getKey();
+
+        // Formato uniforme: "gUeVaRa" -> "Guevara" (antes de validar y guardar).
+        $request->merge([
+            'nombres' => Texto::nombrePropio($request->input('nombres')),
+            'apellidos' => Texto::nombrePropio($request->input('apellidos')),
+        ]);
 
         $data = $request->validate([
             'facultad' => ['required', Rule::in(array_keys(Catalogo::FACULTADES))],
@@ -176,8 +184,8 @@ class EstudianteController extends Controller
             $codigo = trim((string) ($fila['codigo_universitario'] ?? ''));
             $complemento = trim((string) ($fila['ci_complemento'] ?? '')) ?: null;
             $ci = trim((string) ($fila['ci'] ?? ''));
-            $nombres = trim((string) ($fila['nombres'] ?? ''));
-            $apellidos = trim((string) ($fila['apellidos'] ?? ''));
+            $nombres = Texto::nombrePropio($fila['nombres'] ?? '');
+            $apellidos = Texto::nombrePropio($fila['apellidos'] ?? '');
 
             if (! preg_match(self::REGEX_CODIGO, $codigo)) {
                 $errores[] = "Fila {$numeroFila}, columna 'codigo_universitario': debe tener exactamente 9 dígitos.";
@@ -225,8 +233,8 @@ class EstudianteController extends Controller
                     'codigo_universitario' => $codigo,
                     'ci_complemento' => trim((string) ($fila['ci_complemento'] ?? '')) ?: null,
                     'documento_identidad' => trim((string) $fila['ci']),
-                    'nombres' => trim((string) $fila['nombres']),
-                    'apellidos' => trim((string) $fila['apellidos']),
+                    'nombres' => Texto::nombrePropio($fila['nombres']),
+                    'apellidos' => Texto::nombrePropio($fila['apellidos']),
                     'correo_institucional' => $codigo.'@universidad.edu',
                     'estado' => 'ACTIVO',
                 ]);
@@ -237,6 +245,7 @@ class EstudianteController extends Controller
                     'grupo_id' => $grupo->id,
                     'docente_id' => $grupo->docente_id,
                 ]);
+                app(InscripcionAsignaturaService::class)->inscribir((int) $estudiante->getKey(), (int) $request->materia_id);
 
                 $total++;
             }

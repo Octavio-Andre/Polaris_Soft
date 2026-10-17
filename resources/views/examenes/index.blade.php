@@ -161,6 +161,9 @@
                                 <option value="{{ $carrera }}" @selected(old('carrera') === $carrera)>{{ $carrera }}</option>
                             @endforeach
                         </select>
+                        @if ($carreras->isEmpty())
+                            <p class="err">Aún no hay carreras disponibles: primero asigna materias a los estudiantes (Estudiantes → Asignar materia, grupo y docente).</p>
+                        @endif
                         @error('carrera')<p class="err">{{ $message }}</p>@enderror
                     </div>
                     <div class="field">

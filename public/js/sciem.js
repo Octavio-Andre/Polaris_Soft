@@ -153,6 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
             d.close();
         });
 
+        // Tecla Esc: si hay datos escritos, pide confirmación antes de descartarlos.
+        d.addEventListener('cancel', e => {
+            if (formularioModificado(f) && !confirm('¿Deseas descartar los cambios ingresados?')) {
+                e.preventDefault();
+            }
+        });
+
         d.addEventListener('close', () => {
             // Solo el formulario de "nuevo" conserva lo escrito; editar/ver nunca se guardan.
             if (d.dataset.closeMode === 'cancel' || d.dataset.modo !== 'nuevo') {

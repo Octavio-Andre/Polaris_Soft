@@ -115,6 +115,9 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        // ---- Asignaturas e inscripciones (de aquí salen Carrera y Asignatura al registrar exámenes) ----
+        $this->call(AsignaturaSeeder::class);
+
         // ---- Exámenes (fechas relativas a hoy para que el dashboard siempre tenga próximos) ----
         if (Examen::count() === 0) {
             $normasAdm = 'Presentar CI físico original y Credencial Universitaria vigente 15 minutos antes de la hora señalada.';
