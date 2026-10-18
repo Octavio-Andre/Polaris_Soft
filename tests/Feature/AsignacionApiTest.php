@@ -100,6 +100,19 @@ class AsignacionApiTest extends TestCase
         $this->assertDatabaseHas('asignaciones', ['estudiante_id' => 42] + $this->datos());
     }
 
+    public function test_la_asignacion_por_api_deja_al_estudiante_disponible_para_examenes(): void
+    {
+        $this->actingAs($this->admin)->postJson('/api/estudiantes/42/asignaciones', $this->datos())
+            ->assertCreated();
+
+        $asignatura = \Illuminate\Support\Facades\DB::table('asignatura')->where('codigo', 'MAT-A')->first();
+        $this->assertNotNull($asignatura);
+        $this->assertDatabaseHas('estudiante_asignatura', [
+            'id_estudiante' => 42, 'id_asignatura' => $asignatura->id_asignatura, 'estado' => 'ACTIVO',
+        ]);
+        $this->get('/examenes')->assertOk()->assertSee('Materia A');
+    }
+
     public function test_la_ruta_actual_muestra_la_asignacion_guardada_y_su_accion_quitar(): void
     {
         $asignacionId = $this->actingAs($this->admin)
