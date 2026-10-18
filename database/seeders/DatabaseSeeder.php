@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\Asignacion;
+use App\Models\Ambiente;
 use App\Models\Docente;
 use App\Models\Estudiante;
 use App\Models\Examen;
 use App\Models\Grupo;
 use App\Models\Materia;
+use App\Models\MotivoInhabilitacion;
 use App\Models\User;
 use App\Support\Catalogo;
 use Illuminate\Database\Seeder;
@@ -20,6 +22,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(AmbienteSeeder::class);
+
+        // ---- Catálogo de causas de inhabilitación (RQ4) ----
+        foreach ([
+            'Deuda económica pendiente',
+            'Documentación incompleta',
+            'Suspensión disciplinaria',
+            'Requisito académico no cumplido',
+            'Otro',
+        ] as $descripcion) {
+            MotivoInhabilitacion::firstOrCreate(['descripcion' => $descripcion]);
+        }
+
         // ---- Usuarios (uno por rol + un inactivo) ----
         foreach ([
             ['Carlos', 'Choque', 'Licenciado(a)', 'carlos.choque@sciem.edu', 'administrador', 'activo'],
@@ -52,10 +67,14 @@ class DatabaseSeeder extends Seeder
             ['Álgebra Lineal', 'MAT-102', 'Ingeniería Industrial'],
             ['Base de Datos I', 'INF-240', 'Ingeniería de Sistemas'],
         ])->map(function ($m, $i) use ($docentes) {
-            $materia = Materia::updateOrCreate(['sigla' => $m[1]], ['nombre' => $m[0], 'carrera' => $m[2]]);
+            $materia = Materia::updateOrCreate(['sigla' => $m[1]], ['nombre' => $m[0], 'carrera' => $m[2], 'facultad' => Catalogo::facultadDeCarrera($m[2])]);
             Grupo::firstOrCreate(
                 ['materia_id' => $materia->id, 'nombre' => 'Grupo A'],
                 ['docente_id' => $docentes[$i % $docentes->count()]->id]
+            );
+            Grupo::firstOrCreate(
+                ['materia_id' => $materia->id, 'nombre' => 'Grupo B'],
+                ['docente_id' => $docentes[($i + 1) % $docentes->count()]->id]
             );
             $materia->carrera_demo = $m[2];
 
@@ -87,12 +106,17 @@ class DatabaseSeeder extends Seeder
             // Cada estudiante queda asignado a 2 materias (alimenta "Capacidad / Asign.")
             foreach ([$i % 6, ($i + 2) % 6] as $k) {
                 $materia = $materias[$k];
+                // Reparte a los estudiantes entre Grupo A y Grupo B de cada materia.
+                $grupo = $materia->grupos()->orderBy('nombre')->get()[intdiv($i, 2) % 2];
                 Asignacion::firstOrCreate(
                     ['estudiante_id' => $est->getKey(), 'materia_id' => $materia->id],
-                    ['grupo_id' => $materia->grupos()->first()->id, 'docente_id' => $materia->grupos()->first()->docente_id]
+                    ['grupo_id' => $grupo->id, 'docente_id' => $grupo->docente_id]
                 );
             }
         }
+
+        // ---- Asignaturas e inscripciones (de aquí salen Carrera y Asignatura al registrar exámenes) ----
+        $this->call(AsignaturaSeeder::class);
 
         // ---- Exámenes (fechas relativas a hoy para que el dashboard siempre tenga próximos) ----
         if (Examen::count() === 0) {

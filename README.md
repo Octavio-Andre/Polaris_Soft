@@ -12,6 +12,9 @@ php artisan migrate:fresh --seed
 php artisan serve             # http://127.0.0.1:8000
 ```
 
+Configura también `MAIL_*` en el `.env` (con `MAIL_MAILER=log` los correos se escriben en `storage/logs/laravel.log`).
+Despliegue en el laboratorio: `./deploy.sh` (ver `docs/Sprint2_implementacion.md`).
+
 No hace falta `npm`: los estilos están en `public/css/sciem.css` y el JS de los modales en `public/js/sciem.js`.
 
 Usuarios de prueba (contraseña `password123`):
@@ -27,6 +30,7 @@ Usuarios de prueba (contraseña `password123`):
 
 - `resources/views/layouts/app.blade.php`: sidebar + topbar (el menú depende del rol).
 - `auth/login`, `admin/dashboard`, `estudiantes/index`, `examenes/index`, `usuarios/index`: cada pantalla del Figma (los modales de "Registrar…" están dentro de cada vista).
+- El catálogo de ambientes y capacidades se administra desde `ambientes/index` y alimenta el formulario de registro de exámenes.
 - Rutas en `routes/web.php`; módulos de gestión protegidos con `role:administrador`.
 
 ---
