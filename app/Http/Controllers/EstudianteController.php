@@ -6,7 +6,9 @@ use App\Models\Asignacion;
 use App\Models\Estudiante;
 use App\Models\Grupo;
 use App\Models\Materia;
+use App\Services\InscripcionAsignaturaService;
 use App\Support\Catalogo;
+use App\Support\Texto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -54,7 +56,10 @@ class EstudianteController extends Controller
 
     public function store(Request $request)
     {
-        Estudiante::create($this->validar($request));
+        $data = $this->validar($request);
+        $data['estado'] = 'ACTIVO';
+
+        Estudiante::create($data);
 
         return redirect()->route('estudiantes.index')->with('status', 'Estudiante registrado correctamente.');
     }
@@ -76,6 +81,12 @@ class EstudianteController extends Controller
     private function validar(Request $request, ?Estudiante $actual = null): array
     {
         $id = $actual?->getKey();
+
+        // Formato uniforme: "gUeVaRa" -> "Guevara" (antes de validar y guardar).
+        $request->merge([
+            'nombres' => Texto::nombrePropio($request->input('nombres')),
+            'apellidos' => Texto::nombrePropio($request->input('apellidos')),
+        ]);
 
         $data = $request->validate([
             'facultad' => ['required', Rule::in(array_keys(Catalogo::FACULTADES))],
@@ -173,8 +184,8 @@ class EstudianteController extends Controller
             $codigo = trim((string) ($fila['codigo_universitario'] ?? ''));
             $complemento = trim((string) ($fila['ci_complemento'] ?? '')) ?: null;
             $ci = trim((string) ($fila['ci'] ?? ''));
-            $nombres = trim((string) ($fila['nombres'] ?? ''));
-            $apellidos = trim((string) ($fila['apellidos'] ?? ''));
+            $nombres = Texto::nombrePropio($fila['nombres'] ?? '');
+            $apellidos = Texto::nombrePropio($fila['apellidos'] ?? '');
 
             if (! preg_match(self::REGEX_CODIGO, $codigo)) {
                 $errores[] = "Fila {$numeroFila}, columna 'codigo_universitario': debe tener exactamente 9 dígitos.";
@@ -222,8 +233,8 @@ class EstudianteController extends Controller
                     'codigo_universitario' => $codigo,
                     'ci_complemento' => trim((string) ($fila['ci_complemento'] ?? '')) ?: null,
                     'documento_identidad' => trim((string) $fila['ci']),
-                    'nombres' => trim((string) $fila['nombres']),
-                    'apellidos' => trim((string) $fila['apellidos']),
+                    'nombres' => Texto::nombrePropio($fila['nombres']),
+                    'apellidos' => Texto::nombrePropio($fila['apellidos']),
                     'correo_institucional' => $codigo.'@universidad.edu',
                     'estado' => 'ACTIVO',
                 ]);
@@ -234,6 +245,7 @@ class EstudianteController extends Controller
                     'grupo_id' => $grupo->id,
                     'docente_id' => $grupo->docente_id,
                 ]);
+                app(InscripcionAsignaturaService::class)->inscribir((int) $estudiante->getKey(), (int) $request->materia_id);
 
                 $total++;
             }
@@ -275,4 +287,95 @@ class EstudianteController extends Controller
 
         return $filas;
     }
+
+    
+
+public function vistaIngreso()
+{
+    return view('ingreso.index');
+}
+
+public function verificarIngreso(Request $request)
+{
+    $request->validate([
+        'modo' => ['required', 'in:codigo,ci'],
+        'codigo_universitario' => [
+            'required_if:modo,codigo',
+            'nullable',
+            'regex:/^[0-9]{9}$/',
+        ],
+        'ci' => [
+            'required_if:modo,ci',
+            'nullable',
+            'regex:/^[0-9]{5,10}$/',
+        ],
+        'ci_complemento' => [
+            'nullable',
+            'regex:/^[A-Za-z0-9]{1,2}$/',
+        ],
+    ], [
+        'modo.required' => 'Selecciona un método de búsqueda.',
+        'modo.in' => 'El método de búsqueda no es válido.',
+        'codigo_universitario.required_if' =>
+            'Introduce el código universitario.',
+        'codigo_universitario.regex' =>
+            'El código universitario debe tener 9 dígitos.',
+        'ci.required_if' => 'Introduce la cédula de identidad.',
+        'ci.regex' =>
+            'El C.I. debe contener entre 5 y 10 dígitos.',
+        'ci_complemento.regex' =>
+            'El complemento debe tener entre 1 y 2 caracteres alfanuméricos.',
+    ]);
+
+    if ($request->modo === 'codigo') {
+        $estudiante = \App\Models\Estudiante::where(
+            'codigo_universitario',
+            trim($request->codigo_universitario)
+        )->first();
+    } else {
+        $ci = trim($request->ci);
+        $complemento = strtoupper(
+            trim($request->ci_complemento ?? '')
+        );
+
+        $consulta = \App\Models\Estudiante::where(
+            'documento_identidad',
+            $ci
+        );
+
+        if ($complemento === '') {
+            $consulta->where(function ($query) {
+                $query->whereNull('ci_complemento')
+                      ->orWhere('ci_complemento', '');
+            });
+        } else {
+            $consulta->where('ci_complemento', $complemento);
+        }
+
+        $estudiante = $consulta->first();
+    }
+
+    if (!$estudiante) {
+        return response()->json([
+            'encontrado' => false,
+            'mensaje' => 'No se encontró un estudiante con los datos proporcionados.',
+        ], 404);
+    }
+
+    return response()->json([
+        'encontrado' => true,
+        'mensaje' => 'Estudiante encontrado correctamente.',
+        'estudiante' => [
+            'id_estudiante' => $estudiante->id_estudiante,
+            'nombres' => $estudiante->nombres,
+            'apellidos' => $estudiante->apellidos,
+            'codigo_universitario' => $estudiante->codigo_universitario,
+            'documento_identidad' => $estudiante->documento_identidad,
+            'ci_complemento' => $estudiante->ci_complemento,
+            'facultad' => $estudiante->facultad,
+            'carrera' => $estudiante->carrera,
+            'estado' => $estudiante->estado,
+        ],
+    ]);
+}
 }

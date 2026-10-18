@@ -27,11 +27,12 @@ class AsignacionApiTest extends TestCase
         $this->admin = User::factory()->create(['rol' => 'administrador', 'estado' => 'activo']);
         $this->estudiante = Estudiante::forceCreate([
             'id_estudiante' => 42,
-            'codigo_universitario' => '2026-00042',
-            'documento_identidad' => 'PRUEBA-42',
+            'codigo_universitario' => '202600042',
+            'documento_identidad' => '7654321',
             'nombres' => 'Ana', 'apellidos' => 'Prueba',
+            'carrera' => 'Ingeniería de Sistemas', 'estado' => 'ACTIVO',
         ]);
-        $this->materia = Materia::create(['nombre' => 'Materia A']);
+        $this->materia = Materia::create(['nombre' => 'Materia A', 'sigla' => 'MAT-A', 'carrera' => 'Ingeniería de Sistemas']);
         $this->docente = Docente::create(['nombre' => 'Docente A', 'ci' => 'PRUEBA-A']);
         $this->grupo = Grupo::create([
             'nombre' => 'Grupo A',
@@ -62,7 +63,7 @@ class AsignacionApiTest extends TestCase
 
     public function test_los_catalogos_filtran_grupos_y_docentes_por_su_relacion(): void
     {
-        $otraMateria = Materia::create(['nombre' => 'Materia B']);
+        $otraMateria = Materia::create(['nombre' => 'Materia B', 'sigla' => 'MAT-B']);
         Grupo::create(['nombre' => 'Grupo B', 'materia_id' => $otraMateria->id]);
 
         $this->actingAs($this->admin)->getJson('/api/materias')->assertOk()->assertJsonCount(2, 'data');
@@ -74,7 +75,7 @@ class AsignacionApiTest extends TestCase
 
     public function test_los_catalogos_vacios_devuelven_arreglos_vacios(): void
     {
-        $materia = Materia::create(['nombre' => 'Sin grupos']);
+        $materia = Materia::create(['nombre' => 'Sin grupos', 'sigla' => 'MAT-SG']);
         $grupo = Grupo::create(['nombre' => 'Sin docente', 'materia_id' => $this->materia->id]);
         $this->actingAs($this->admin)->getJson('/api/materias/'.$materia->id.'/grupos')
             ->assertOk()->assertExactJson(['data' => []]);
@@ -126,7 +127,7 @@ class AsignacionApiTest extends TestCase
         $asignacionId = $this->actingAs($this->admin)
             ->postJson('/api/estudiantes/42/asignaciones', $this->datos())
             ->assertCreated()->json('data.id');
-        $otraMateria = Materia::create(['nombre' => 'Materia B']);
+        $otraMateria = Materia::create(['nombre' => 'Materia B', 'sigla' => 'MAT-B']);
         $otroGrupo = Grupo::create([
             'nombre' => 'Grupo B', 'materia_id' => $otraMateria->id, 'docente_id' => $this->docente->id,
         ]);
@@ -144,7 +145,7 @@ class AsignacionApiTest extends TestCase
 
     public function test_rechaza_un_grupo_de_otra_materia(): void
     {
-        $otraMateria = Materia::create(['nombre' => 'Materia B']);
+        $otraMateria = Materia::create(['nombre' => 'Materia B', 'sigla' => 'MAT-B']);
         $this->actingAs($this->admin)->postJson('/api/estudiantes/42/asignaciones',
             array_replace($this->datos(), ['materia_id' => $otraMateria->id]))
             ->assertUnprocessable()->assertJsonValidationErrors('grupo_id');

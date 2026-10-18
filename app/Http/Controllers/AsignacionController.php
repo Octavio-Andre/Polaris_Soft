@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asignacion;
 use App\Models\Estudiante;
+use App\Services\InscripcionAsignaturaService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -18,7 +19,7 @@ class AsignacionController extends Controller
         return view('asignaciones.create', compact('estudiante', 'asignaciones'));
     }
 
-    public function store(Request $request, Estudiante $estudiante)
+    public function store(Request $request, Estudiante $estudiante, InscripcionAsignaturaService $inscripciones)
     {
         $data = $request->validate([
             'materia_id' => ['required', 'exists:materias,id'],
@@ -43,14 +44,18 @@ class AsignacionController extends Controller
         }
 
         Asignacion::create($data);
+        // La materia también queda como inscripción: así aparece su carrera y asignatura al registrar exámenes.
+        $inscripciones->inscribir((int) $estudiante->getKey(), (int) $data['materia_id']);
 
         return back()->with('success', 'Asignación registrada correctamente.');
     }
 
-    public function destroy(Asignacion $asignacion)
+    public function destroy(Asignacion $asignacion, InscripcionAsignaturaService $inscripciones)
     {
         $estudianteId = $asignacion->estudiante_id;
+        $materia = $asignacion->materia;
         $asignacion->delete();
+        $inscripciones->desinscribir((int) $estudianteId, $materia);
 
         return redirect()
             ->route('asignaciones.create', $estudianteId)
