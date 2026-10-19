@@ -66,6 +66,8 @@ Antes de subir: extraer `application.zip` en otro directorio local, configurar u
 
 No crear una ruta web para ejecutar Artisan, migraciones ni comandos del sistema. Si la universidad facilita consola, usarla con su usuario autorizado; si solo hay phpMyAdmin, preparar y ensayar SQL específico por versión.
 
+En TIS, PHP y FTP usan propietarios distintos. La configuración de entrega guarda sesiones y caché en las tablas `sessions`, `cache` y `cache_locks`; mantiene el límite de intentos de acceso entre peticiones. Los registros se envían al error log del servidor. `VIEW_CACHE_PRIVATE_TEMP=true` compila las vistas en una carpeta temporal privada (0700) propiedad de PHP, identificada por aplicación y APP_KEY. Esas vistas son regenerables; su limpieza no elimina datos ni sesiones. No almacenar archivos de usuarios en ese temporal. Se conservan los permisos del código y se evita conceder escritura universal a `storage/`.
+
 ## Actualizaciones mientras continúa el desarrollo
 
 - Construir una entrega identificada por commit y revisar compatibilidad de PHP, extensiones y dependencias. Instalar desde el lock, sin actualizar dependencias durante la carga al servidor.
