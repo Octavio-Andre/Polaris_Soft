@@ -59,7 +59,7 @@
         </nav>
 
         <div class="side-foot">
-            <b>Versión Sprint 1.0</b><br>
+            <b>Versión {{ config('app.version') }}</b><br>
             Proyecto ISW · Gestión 2026
         </div>
     </aside>

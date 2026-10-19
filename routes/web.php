@@ -107,7 +107,7 @@ Route::middleware(['auth', 'role:docente'])->group(function () {
 
 // --- Personal de control ---
 Route::middleware(['auth', 'role:control'])->group(function () {
-    Route::get('/control/dashboard', fn () => view('control.dashboard'));
+    Route::redirect('/control/dashboard', '/verificacion');
 });
 
 // --- Verificación de ingreso ---

@@ -7,6 +7,8 @@ use App\Models\Estudiante;
 use App\Services\InscripcionAsignaturaService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AsignacionController extends Controller
 {
@@ -24,11 +26,19 @@ class AsignacionController extends Controller
         $data = $request->validate([
             'materia_id' => ['required', 'exists:materias,id'],
             'grupo_id' => ['required', 'exists:grupos,id'],
-            'docente_id' => ['nullable', 'exists:docentes,id'],
+            'docente_id' => ['required', 'exists:docentes,id'],
         ], [
             'materia_id.required' => 'Selecciona una materia.',
             'grupo_id.required' => 'Selecciona un grupo.',
         ]);
+
+        $grupo = \App\Models\Grupo::findOrFail($data['grupo_id']);
+        if ((int) $grupo->materia_id !== (int) $data['materia_id']) {
+            throw ValidationException::withMessages(['grupo_id' => 'Selecciona un grupo de la materia elegida.']);
+        }
+        if ((int) $grupo->docente_id !== (int) $data['docente_id']) {
+            throw ValidationException::withMessages(['docente_id' => 'Selecciona un docente asignado al grupo elegido.']);
+        }
 
         $data['estudiante_id'] = $estudiante->getKey();
 
@@ -43,9 +53,10 @@ class AsignacionController extends Controller
             ])->withInput();
         }
 
-        Asignacion::create($data);
-        // La materia también queda como inscripción: así aparece su carrera y asignatura al registrar exámenes.
-        $inscripciones->inscribir((int) $estudiante->getKey(), (int) $data['materia_id']);
+        DB::transaction(function () use ($data, $estudiante, $inscripciones) {
+            Asignacion::create($data);
+            $inscripciones->inscribir((int) $estudiante->getKey(), (int) $data['materia_id']);
+        });
 
         return back()->with('success', 'Asignación registrada correctamente.');
     }
@@ -54,8 +65,10 @@ class AsignacionController extends Controller
     {
         $estudianteId = $asignacion->estudiante_id;
         $materia = $asignacion->materia;
-        $asignacion->delete();
-        $inscripciones->desinscribir((int) $estudianteId, $materia);
+        DB::transaction(function () use ($asignacion, $estudianteId, $materia, $inscripciones) {
+            $asignacion->delete();
+            $inscripciones->desinscribir((int) $estudianteId, $materia);
+        });
 
         return redirect()
             ->route('asignaciones.create', $estudianteId)
