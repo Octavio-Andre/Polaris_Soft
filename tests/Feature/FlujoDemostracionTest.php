@@ -49,6 +49,8 @@ class FlujoDemostracionTest extends TestCase
             'facultad' => Catalogo::facultadDeCarrera('Ingeniería de Sistemas'),
             'correo_institucional' => 'estudiante@polaris.test',
         ]);
+        // Sprint 3: la foto aprobada es obligatoria para autorizar el ingreso.
+        $this->estudiante->forceFill(['foto_path' => 'fotos_estudiantes/prueba.jpg', 'foto_estado' => 'APROBADA'])->save();
         $docente = Docente::create(['nombre' => 'Laura', 'apellido' => 'Demo', 'ci' => '7654322']);
         $this->materia = Materia::create([
             'nombre' => 'Calculo', 'sigla' => 'MAT-DEMO', 'carrera' => 'Ingeniería de Sistemas',

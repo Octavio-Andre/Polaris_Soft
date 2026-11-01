@@ -7,7 +7,8 @@ use App\Models\Estudiante;
 use App\Models\Examen;
 use App\Models\Habilitacion;
 use App\Models\TransparenciaIngreso;
-use App\Services\TransparenciaIngresoService;
+use App\Services\IngresoService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -37,6 +38,7 @@ class TransparenciaIngresoController extends Controller
             'metodos' => TransparenciaIngreso::METODOS,
             // Opciones de los filtros: solo lo que realmente aparece en la bitácora.
             'examenes' => TransparenciaIngreso::query()
+                ->when($request->user()->rol === 'docente', fn ($q) => $q->whereIn('examen_id', Examen::query()->deDocente($request->user())->pluck('examenes.id')))
                 ->select('examen_id', 'examen_descripcion')->distinct()
                 ->orderByDesc('examen_id')->get(),
             'ambientes' => TransparenciaIngreso::query()
@@ -60,7 +62,7 @@ class TransparenciaIngresoController extends Controller
      * Body: estudiante_id, examen_id, metodo (CODIGO_UNIV|CI|QR) y, opcional, ambiente_id.
      * La hora, el controlador y los metadatos NO se envían: los captura el servidor.
      */
-    public function registrar(Request $request, TransparenciaIngresoService $servicio): JsonResponse
+    public function registrar(Request $request, IngresoService $servicio): JsonResponse
     {
         $data = $request->validate([
             'estudiante_id' => ['required', 'integer', Rule::exists('estudiante', 'id_estudiante')],
@@ -73,6 +75,19 @@ class TransparenciaIngresoController extends Controller
 
         $estudiante = Estudiante::findOrFail($data['estudiante_id']);
         $examen = Examen::findOrFail($data['examen_id']);
+
+        // Mismas reglas que /verificacion/ingreso: estudiante activo y con foto válida.
+        if (strtoupper((string) $estudiante->estado) !== 'ACTIVO') {
+            return response()->json([
+                'mensaje' => 'El estudiante no se encuentra activo para rendir el examen (estado: '.strtoupper((string) $estudiante->estado).').',
+            ], 422);
+        }
+
+        if (! $estudiante->foto_valida) {
+            return response()->json([
+                'mensaje' => 'El estudiante no tiene una foto válida registrada, por eso no se puede autorizar su ingreso.',
+            ], 422);
+        }
 
         // Solo se autoriza (y registra) el ingreso de estudiantes habilitados para ese examen.
         $habilitacion = Habilitacion::with('motivo')
@@ -90,18 +105,23 @@ class TransparenciaIngresoController extends Controller
             ], 422);
         }
 
-        $registro = $servicio->registrar(
-            $estudiante,
-            $examen,
-            $request->user(),
-            $data['metodo'],
-            $request,
-            ! empty($data['ambiente_id']) ? Ambiente::find($data['ambiente_id']) : null
-        );
+        // Guarda `ingreso` y `transparencia_ingreso` en una transacción, con la hora del servidor (America/La_Paz).
+        try {
+            $resultado = $servicio->registrar(
+                $estudiante,
+                $examen,
+                $request->user(),
+                $data['metodo'],
+                $request,
+                ! empty($data['ambiente_id']) ? Ambiente::find($data['ambiente_id']) : null
+            );
+        } catch (UniqueConstraintViolationException $e) {
+            return response()->json(['mensaje' => 'El estudiante ya registró ingreso para este examen.'], 409);
+        }
 
         return response()->json([
             'mensaje' => 'Ingreso autorizado y registrado.',
-            'registro' => $this->aArreglo($registro),
+            'registro' => $this->aArreglo($resultado['transparencia']),
         ], 201);
     }
 
@@ -126,6 +146,11 @@ class TransparenciaIngresoController extends Controller
     private function datosDeAuditoria(array $filtros): array
     {
         $consulta = TransparenciaIngreso::query()->filtrar($filtros);
+
+        // El docente solo ve los ingresos de los exámenes de sus materias.
+        if (auth()->user()?->rol === 'docente') {
+            $consulta->whereIn('examen_id', Examen::query()->deDocente(auth()->user())->pluck('examenes.id'));
+        }
 
         $total = (clone $consulta)->count();
 
